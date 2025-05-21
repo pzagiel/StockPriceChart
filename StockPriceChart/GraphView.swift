@@ -33,17 +33,16 @@ class GraphView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         guard !stockPrices.isEmpty else { return }
-
         guard let context = NSGraphicsContext.current?.cgContext else { return }
 
         let margin: CGFloat = 50
         let graphRect = bounds.insetBy(dx: margin, dy: margin)
 
-        // 🔲 FOND NOIR
+        // 🔲 Fond noir
         NSColor.black.setFill()
         context.fill(bounds)
 
-        // ⚫️ AXES en blanc
+        // 🔲 Axes
         context.setStrokeColor(NSColor.white.cgColor)
         context.setLineWidth(1.0)
         context.move(to: CGPoint(x: graphRect.minX, y: graphRect.minY))
@@ -62,30 +61,83 @@ class GraphView: NSView {
         let dateRange = maxDate.timeIntervalSince(minDate)
         let valueRange = maxValue - minValue
 
-        // 🔵 Courbe des prix
-        context.setStrokeColor(NSColor.systemBlue.cgColor)
-        context.setLineWidth(2.0)
+        // 🟧 Tracé de la courbe + remplissage
+        var linePoints: [CGPoint] = []
 
-        for (index, point) in stockPrices.enumerated() {
+        for point in stockPrices {
             let xRatio = CGFloat(point.date.timeIntervalSince(minDate) / dateRange)
             let yRatio = CGFloat((point.value - minValue) / valueRange)
-
             let x = graphRect.minX + xRatio * graphRect.width
             let y = graphRect.minY + yRatio * graphRect.height
-
-            if index == 0 {
-                context.move(to: CGPoint(x: x, y: y))
-            } else {
-                context.addLine(to: CGPoint(x: x, y: y))
-            }
+            linePoints.append(CGPoint(x: x, y: y))
         }
 
+        // 🟧 Dégradé sous la courbe
+        if let first = linePoints.first, let last = linePoints.last {
+            context.saveGState()
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: first.x, y: graphRect.minY))
+            for point in linePoints {
+                path.addLine(to: point)
+            }
+            path.addLine(to: CGPoint(x: last.x, y: graphRect.minY))
+            path.closeSubpath()
+
+            context.addPath(path)
+            context.clip()
+
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let colors: [CGColor] = [
+                NSColor.orange.withAlphaComponent(0.6).cgColor,
+                NSColor.orange.withAlphaComponent(0.0).cgColor
+            ]
+            let locations: [CGFloat] = [0.0, 1.0]
+            if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: locations) {
+                context.drawLinearGradient(gradient,
+                                           start: CGPoint(x: 0, y: graphRect.maxY),
+                                           end: CGPoint(x: 0, y: graphRect.minY),
+                                           options: [])
+            }
+
+            context.restoreGState()
+        }
+
+        // 🟧 Ligne principale en orange
+        context.setStrokeColor(NSColor.orange.cgColor)
+        context.setLineWidth(2.0)
+        context.beginPath()
+        for (i, pt) in linePoints.enumerated() {
+            i == 0 ? context.move(to: pt) : context.addLine(to: pt)
+        }
         context.strokePath()
 
-        // 🗓 ABSCISSE : Dates
+        // 📈 Grille horizontale (ordonnée)
+        let valueStep = (maxValue - minValue) / 5
+        for i in 0...5 {
+            let value = minValue + valueStep * Double(i)
+            let yRatio = CGFloat((value - minValue) / valueRange)
+            let y = graphRect.minY + yRatio * graphRect.height
+
+            context.setStrokeColor(NSColor.darkGray.withAlphaComponent(0.4).cgColor)
+            context.setLineWidth(0.5)
+            context.move(to: CGPoint(x: graphRect.minX, y: y))
+            context.addLine(to: CGPoint(x: graphRect.maxX, y: y))
+            context.strokePath()
+
+            // 🎯 Graduation
+            let valueStr = String(format: "%.2f", value)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 10)
+            ]
+            let size = valueStr.size(withAttributes: attrs)
+            let rect = CGRect(x: graphRect.minX - size.width - 4, y: y - size.height / 2, width: size.width, height: size.height)
+            valueStr.draw(in: rect, withAttributes: attrs)
+        }
+
+        // 🗓 Abscisses : Dates
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MM-dd"
-        NSColor.white.set()
         for i in stride(from: 0, to: stockPrices.count, by: 3) {
             let point = stockPrices[i]
             let xRatio = CGFloat(point.date.timeIntervalSince(minDate) / dateRange)
@@ -99,23 +151,6 @@ class GraphView: NSView {
             let size = dateStr.size(withAttributes: attrs)
             let rect = CGRect(x: x - size.width / 2, y: graphRect.minY - size.height - 4, width: size.width, height: size.height)
             dateStr.draw(in: rect, withAttributes: attrs)
-        }
-
-        // 📈 ORDONNÉE : Valeurs
-        let valueStep = (maxValue - minValue) / 5
-        for i in 0...5 {
-            let value = minValue + valueStep * Double(i)
-            let yRatio = CGFloat((value - minValue) / valueRange)
-            let y = graphRect.minY + yRatio * graphRect.height
-
-            let valueStr = String(format: "%.2f", value)
-            let attrs: [NSAttributedString.Key: Any] = [
-                .foregroundColor: NSColor.white,
-                .font: NSFont.systemFont(ofSize: 10)
-            ]
-            let size = valueStr.size(withAttributes: attrs)
-            let rect = CGRect(x: graphRect.minX - size.width - 4, y: y - size.height / 2, width: size.width, height: size.height)
-            valueStr.draw(in: rect, withAttributes: attrs)
         }
     }
 
