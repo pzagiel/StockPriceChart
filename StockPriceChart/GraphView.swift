@@ -90,8 +90,8 @@ class GraphView: NSView {
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace,
                                       colors: [
-                                        NSColor.orange.withAlphaComponent(0.25).cgColor,
-                                        NSColor.orange.withAlphaComponent(0.02).cgColor
+                                        NSColor.green.withAlphaComponent(0.02).cgColor,
+                                        NSColor.green.withAlphaComponent(0.35).cgColor
                                       ] as CFArray,
                                       locations: [0.0, 1.0])!
 
@@ -103,7 +103,7 @@ class GraphView: NSView {
         }
 
         // Ligne principale
-        context.setStrokeColor(NSColor.orange.cgColor)
+        context.setStrokeColor(NSColor.green.cgColor)
         context.setLineWidth(2.0)
         context.beginPath()
         context.addLines(between: points)
