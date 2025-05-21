@@ -39,8 +39,12 @@ class GraphView: NSView {
         let margin: CGFloat = 50
         let graphRect = bounds.insetBy(dx: margin, dy: margin)
 
-        // Dessiner axes
-        context.setStrokeColor(NSColor.black.cgColor)
+        // 🔲 FOND NOIR
+        NSColor.black.setFill()
+        context.fill(bounds)
+
+        // ⚫️ AXES en blanc
+        context.setStrokeColor(NSColor.white.cgColor)
         context.setLineWidth(1.0)
         context.move(to: CGPoint(x: graphRect.minX, y: graphRect.minY))
         context.addLine(to: CGPoint(x: graphRect.minX, y: graphRect.maxY))
@@ -48,7 +52,7 @@ class GraphView: NSView {
         context.addLine(to: CGPoint(x: graphRect.maxX, y: graphRect.minY))
         context.strokePath()
 
-        // Extraire valeurs
+        // 🔄 Valeurs
         let dates = stockPrices.map { $0.date }
         let values = stockPrices.map { $0.value }
 
@@ -58,7 +62,7 @@ class GraphView: NSView {
         let dateRange = maxDate.timeIntervalSince(minDate)
         let valueRange = maxValue - minValue
 
-        // Tracer ligne
+        // 🔵 Courbe des prix
         context.setStrokeColor(NSColor.systemBlue.cgColor)
         context.setLineWidth(2.0)
 
@@ -77,7 +81,44 @@ class GraphView: NSView {
         }
 
         context.strokePath()
+
+        // 🗓 ABSCISSE : Dates
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM-dd"
+        NSColor.white.set()
+        for i in stride(from: 0, to: stockPrices.count, by: 3) {
+            let point = stockPrices[i]
+            let xRatio = CGFloat(point.date.timeIntervalSince(minDate) / dateRange)
+            let x = graphRect.minX + xRatio * graphRect.width
+            let dateStr = dateFormatter.string(from: point.date)
+
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 10)
+            ]
+            let size = dateStr.size(withAttributes: attrs)
+            let rect = CGRect(x: x - size.width / 2, y: graphRect.minY - size.height - 4, width: size.width, height: size.height)
+            dateStr.draw(in: rect, withAttributes: attrs)
+        }
+
+        // 📈 ORDONNÉE : Valeurs
+        let valueStep = (maxValue - minValue) / 5
+        for i in 0...5 {
+            let value = minValue + valueStep * Double(i)
+            let yRatio = CGFloat((value - minValue) / valueRange)
+            let y = graphRect.minY + yRatio * graphRect.height
+
+            let valueStr = String(format: "%.2f", value)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 10)
+            ]
+            let size = valueStr.size(withAttributes: attrs)
+            let rect = CGRect(x: graphRect.minX - size.width - 4, y: y - size.height / 2, width: size.width, height: size.height)
+            valueStr.draw(in: rect, withAttributes: attrs)
+        }
     }
+
 
     // MARK: - Chargement du JSON
     private func loadData() {
