@@ -94,15 +94,19 @@ class GraphView: NSView {
             context.clip()
 
             let colorSpace = CGColorSpaceCreateDeviceRGB()
+          
             let gradient = CGGradient(colorsSpace: colorSpace,
-                                      colors: [NSColor.orange.withAlphaComponent(0.4).cgColor,
-                                               NSColor.clear.cgColor] as CFArray,
+                                      colors: [
+                                        NSColor.orange.withAlphaComponent(0.75).cgColor, // plus léger
+                                        NSColor.orange.withAlphaComponent(0.04).cgColor  // quasi invisible
+                                      ] as CFArray,
                                       locations: [0.0, 1.0])!
 
             context.drawLinearGradient(gradient,
-                                       start: CGPoint(x: 0, y: graphRect.maxY),
-                                       end: CGPoint(x: 0, y: graphRect.minY),
+                                       start: CGPoint(x: 0, y: graphRect.minY + 1),
+                                       end: CGPoint(x: 0, y: graphRect.maxY),
                                        options: [])
+
             context.restoreGState()
         }
 
