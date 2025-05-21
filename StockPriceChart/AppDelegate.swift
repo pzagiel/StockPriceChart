@@ -3,6 +3,9 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
 
+    
+    
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         let contentRect = NSRect(x: 0, y: 0, width: 800, height: 600)
         window = NSWindow(contentRect: contentRect,
@@ -14,4 +17,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = GraphView()
         window.makeKeyAndOrderFront(nil)
     }
+    
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+    
 }
