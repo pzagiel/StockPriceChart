@@ -21,50 +21,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.center()
         window.title = "Graphique du cours de l'action"
         let view = GraphView()
-        loadData(into: view)
+        loadDataFromYahoo(from: "BABA",into: view)
         window.contentView = view
         window.makeKeyAndOrderFront(nil)
     }
     
-    func loadData(into graphView: GraphView) {
-        let json = """
-        [
-            {
-                "price": [
-                    {"dateTime": "2025-04-14", "value": 16.168},
-                    {"dateTime": "2025-04-15", "value": 16.462},
-                    {"dateTime": "2025-04-16", "value": 16.514},
-                    {"dateTime": "2025-04-17", "value": 16.478},
-                    {"dateTime": "2025-04-22", "value": 16.688},
-                    {"dateTime": "2025-04-23", "value": 17.418},
-                    {"dateTime": "2025-04-24", "value": 16.642},
-                    {"dateTime": "2025-04-25", "value": 16.876},
-                    {"dateTime": "2025-04-28", "value": 16.966},
-                    {"dateTime": "2025-04-29", "value": 17.252},
-                    {"dateTime": "2025-04-30", "value": 17.014},
-                    {"dateTime": "2025-05-02", "value": 18.27},
-                    {"dateTime": "2025-05-05", "value": 18.15},
-                    {"dateTime": "2025-05-06", "value": 17.89},
-                    {"dateTime": "2025-05-07", "value": 17.77},
-                    {"dateTime": "2025-05-08", "value": 17.992},
-                    {"dateTime": "2025-05-09", "value": 18.204},
-                    {"dateTime": "2025-05-12", "value": 18.434}
-                ],
-                "ticker": "INGA:NA"
-            }
-        ]
-        """
-        let data = Data(json.utf8)
-        do {
-            let stock = try JSONDecoder().decode([StockData].self, from: data)
-            if let prices = stock.first?.price {
-                graphView.setData(prices)
-            }
-        } catch {
-            print("Erreur de décodage JSON : \(error)")
+    func loadDataFromYahoo(from ticker: String, into graphView: GraphView) {
+        print("https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&range=1mo")
+        guard let url = URL(string: "https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&range=ytd") else {
+            print("URL invalide")
+            return
         }
+      
+
+
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                print("Erreur réseau: \(error)")
+                return
+            }
+
+            guard let data = data else {
+                print("Pas de données reçues")
+                return
+            }
+            if let jsonString = String(data: data, encoding: .utf8) {
+                  print("Réponse JSON brute :\n\(jsonString)")
+              }
+            do {
+                let decoded = try JSONDecoder().decode(YahooFinanceResponse.self, from: data)
+                guard let result = decoded.chart.result.first else {
+                    print("Pas de résultat dans la réponse")
+                    return
+                }
+
+                let timestamps = result.timestamp
+                let closes = result.indicators.quote.first?.close ?? []
+
+                var prices: [StockPrice] = []
+                for (i, close) in closes.enumerated() {
+                    if let value = close, i < timestamps.count {
+                        let date = Date(timeIntervalSince1970: TimeInterval(timestamps[i]))
+                        prices.append(StockPrice(date: date, value: value))
+                    }
+                }
+
+                DispatchQueue.main.async {
+                    graphView.setData(prices) // <-- Ici, `setData` doit accepter un tableau de StockPrice avec des Date
+                }
+
+            } catch {
+                print("Erreur de décodage JSON : \(error)")
+            }
+        }
+
+        task.resume()
     }
 
+
+  
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
