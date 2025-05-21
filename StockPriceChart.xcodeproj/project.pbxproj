@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		656DC6992DDE206F00304E7B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 656DC6982DDE206F00304E7B /* main.swift */; };
+		65BCE0DB2DDE306B002B55A6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65BCE0DA2DDE306B002B55A6 /* Models.swift */; };
+		65BCE0DF2DDE40EF002B55A6 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 65BCE0DE2DDE40EF002B55A6 /* AppIcon.icns */; };
 		65F7D2BF2DDE1EE100171243 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F7D2BE2DDE1EE100171243 /* AppDelegate.swift */; };
 		65F7D2C12DDE1EE100171243 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F7D2C02DDE1EE100171243 /* ViewController.swift */; };
 		65F7D2C32DDE1EE200171243 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 65F7D2C22DDE1EE200171243 /* Assets.xcassets */; };
@@ -16,6 +18,9 @@
 
 /* Begin PBXFileReference section */
 		656DC6982DDE206F00304E7B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		65BCE0DA2DDE306B002B55A6 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		65BCE0DE2DDE40EF002B55A6 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		65BCE0E02DDE431A002B55A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		65F7D2BB2DDE1EE100171243 /* StockPriceChart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StockPriceChart.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		65F7D2BE2DDE1EE100171243 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		65F7D2C02DDE1EE100171243 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -54,10 +59,13 @@
 		65F7D2BD2DDE1EE100171243 /* StockPriceChart */ = {
 			isa = PBXGroup;
 			children = (
+				65BCE0E02DDE431A002B55A6 /* Info.plist */,
 				65F7D2BE2DDE1EE100171243 /* AppDelegate.swift */,
+				65BCE0DA2DDE306B002B55A6 /* Models.swift */,
 				656DC6982DDE206F00304E7B /* main.swift */,
 				65F7D2CD2DDE1F6B00171243 /* GraphView.swift */,
 				65F7D2C02DDE1EE100171243 /* ViewController.swift */,
+				65BCE0DE2DDE40EF002B55A6 /* AppIcon.icns */,
 				65F7D2C22DDE1EE200171243 /* Assets.xcassets */,
 				65F7D2C72DDE1EE200171243 /* StockPriceChart.entitlements */,
 			);
@@ -123,6 +131,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				65F7D2C32DDE1EE200171243 /* Assets.xcassets in Resources */,
+				65BCE0DF2DDE40EF002B55A6 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,6 +146,7 @@
 				65F7D2BF2DDE1EE100171243 /* AppDelegate.swift in Sources */,
 				656DC6992DDE206F00304E7B /* main.swift in Sources */,
 				65F7D2CE2DDE1F6B00171243 /* GraphView.swift in Sources */,
+				65BCE0DB2DDE306B002B55A6 /* Models.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -261,11 +271,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = StockPriceChart/StockPriceChart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StockPriceChart/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -286,11 +300,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = StockPriceChart/StockPriceChart.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StockPriceChart/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
