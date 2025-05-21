@@ -32,10 +32,10 @@ class GraphView: NSView {
         context.fill(bounds)
 
         // Convertir les données avec des dates valides uniquement
-        let validPrices: [(date: Date, value: Double)] = stockPrices.compactMap {
-            guard let date = $0.date else { return nil }
-            return (date: date, value: $0.value)
+        let validPrices: [(date: Date, value: Double)] = stockPrices.map {
+            (date: $0.date, value: $0.value)
         }
+
 
         guard !validPrices.isEmpty else { return }
 
