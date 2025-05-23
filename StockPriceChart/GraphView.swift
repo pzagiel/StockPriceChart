@@ -48,21 +48,70 @@ class GraphView: NSView {
               maxDate != minDate,
               maxValue != minValue else { return }
 
-        // Calculer la marge gauche nécessaire pour les labels de valeurs
+        // Fonction pour calculer un intervalle "propre"
+        func calculateNiceInterval(_ range: Double, _ targetTicks: Int) -> Double {
+            let roughInterval = range / Double(targetTicks - 1)
+            let magnitude = pow(10.0, floor(log10(roughInterval)))
+            let normalizedInterval = roughInterval / magnitude
+            
+            let niceInterval: Double
+            if normalizedInterval <= 1.0 {
+                niceInterval = 1.0
+            } else if normalizedInterval <= 2.0 {
+                niceInterval = 2.0
+            } else if normalizedInterval <= 5.0 {
+                niceInterval = 5.0
+            } else {
+                niceInterval = 10.0
+            }
+            
+            return niceInterval * magnitude
+        }
+        
+        // Calculer les valeurs "propres" pour les labels
+        let targetTicks = 5
+        let valueRange = maxValue - minValue
+        let niceInterval = calculateNiceInterval(valueRange, targetTicks)
+        let niceMin = floor(minValue / niceInterval) * niceInterval
+        let niceMax = ceil(maxValue / niceInterval) * niceInterval
+        
+        // Générer les valeurs de ticks "propres"
+        var tickValues: [Double] = []
+        var current = niceMin
+        while current <= niceMax {
+            if current >= minValue && current <= maxValue {
+                tickValues.append(current)
+            }
+            current += niceInterval
+        }
+        
+        // Si on n'a pas assez de ticks, on ajoute les bornes
+        if tickValues.isEmpty || tickValues.first! > minValue {
+            tickValues.insert(minValue, at: 0)
+        }
+        if tickValues.last! < maxValue {
+            tickValues.append(maxValue)
+        }
+        
         let labelAttributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 14),
             .foregroundColor: NSColor.white
         ]
         
-        let gridLineCount = 5
-        let valueRange = maxValue - minValue
         var maxLabelWidth: CGFloat = 0
         
         // Calculer la largeur maximale nécessaire pour tous les labels de valeurs
-        for i in 0...gridLineCount {
-            let value = minValue + (Double(i) / Double(gridLineCount)) * valueRange
-            let label = String(format: "%.2f", value) as NSString
-            let size = label.size(withAttributes: labelAttributes)
+        for value in tickValues {
+            let label: String
+            if niceInterval >= 1.0 {
+                label = String(format: "%.0f", value)
+            } else if niceInterval >= 0.1 {
+                label = String(format: "%.1f", value)
+            } else {
+                label = String(format: "%.2f", value)
+            }
+            let labelString = label as NSString
+            let size = labelString.size(withAttributes: labelAttributes)
             maxLabelWidth = max(maxLabelWidth, size.width)
         }
         
@@ -78,12 +127,13 @@ class GraphView: NSView {
 
         let dateRange = maxDate.timeIntervalSince(minDate)
 
-        // Grille horizontale
+        // Grille horizontale basée sur les valeurs "propres"
         context.setStrokeColor(NSColor.darkGray.cgColor)
         context.setLineWidth(0.5)
 
-        for i in 0...gridLineCount {
-            let y = graphRect.minY + CGFloat(i) / CGFloat(gridLineCount) * graphRect.height
+        for value in tickValues {
+            let yRatio = CGFloat((value - minValue) / valueRange)
+            let y = graphRect.minY + yRatio * graphRect.height
             context.move(to: CGPoint(x: graphRect.minX, y: y))
             context.addLine(to: CGPoint(x: graphRect.maxX, y: y))
         }
@@ -149,15 +199,30 @@ class GraphView: NSView {
                        withAttributes: labelAttributes)
         }
 
-        // Labels des valeurs avec positionnement amélioré
-        for i in 0...gridLineCount {
-            let value = minValue + (Double(i) / Double(gridLineCount)) * valueRange
-            let y = graphRect.minY + CGFloat(i) / CGFloat(gridLineCount) * graphRect.height
-            let label = String(format: "%.2f", value) as NSString
-            let size = label.size(withAttributes: labelAttributes)
+        // Labels des valeurs avec positionnement amélioré (on skip la première valeur si c'est le minimum)
+        for (index, value) in tickValues.enumerated() {
+            // Skip le premier label s'il correspond au minimum (sur l'axe horizontal)
+            if index == 0 && abs(value - minValue) < 0.001 {
+                continue
+            }
+            
+            let yRatio = CGFloat((value - minValue) / valueRange)
+            let y = graphRect.minY + yRatio * graphRect.height
+            
+            let label: String
+            if niceInterval >= 1.0 {
+                label = String(format: "%.0f", value)
+            } else if niceInterval >= 0.1 {
+                label = String(format: "%.1f", value)
+            } else {
+                label = String(format: "%.2f", value)
+            }
+            
+            let labelString = label as NSString
+            let size = labelString.size(withAttributes: labelAttributes)
             
             // Alignement à droite par rapport à la zone graphique
-            label.draw(at: CGPoint(x: graphRect.minX - size.width - 5, y: y - size.height / 2),
+            labelString.draw(at: CGPoint(x: graphRect.minX - size.width - 5, y: y - size.height / 2),
                        withAttributes: labelAttributes)
         }
 
