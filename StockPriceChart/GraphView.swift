@@ -69,32 +69,47 @@ class GraphView: NSView {
         }
         
         // Calculer les valeurs "propres" pour les labels
-        let targetTicks = 5
+        let minTicks = 4  // Minimum de lignes souhaitées
+        let maxTicks = 6  // Maximum de lignes souhaitées
         let valueRange = maxValue - minValue
-        let niceInterval = calculateNiceInterval(valueRange, targetTicks)
+        
+        // Essayer différents nombres de ticks pour trouver le meilleur
+        var bestInterval = 0.0
+        var bestTickCount = 0
+        
+        for targetTicks in minTicks...maxTicks {
+            let interval = calculateNiceInterval(valueRange, targetTicks)
+            let niceMin = floor(minValue / interval) * interval
+            let niceMax = ceil(maxValue / interval) * interval
+            let actualTicks = Int((niceMax - niceMin) / interval) + 1
+            
+            // Privilégier les configurations qui donnent un nombre raisonnable de ticks
+            if actualTicks >= minTicks && actualTicks <= maxTicks {
+                bestInterval = interval
+                bestTickCount = actualTicks
+                break
+            } else if bestInterval == 0.0 { // Garder la première option comme fallback
+                bestInterval = interval
+                bestTickCount = actualTicks
+            }
+        }
+        
+        let niceInterval = bestInterval
         let niceMin = floor(minValue / niceInterval) * niceInterval
         let niceMax = ceil(maxValue / niceInterval) * niceInterval
         
         // Générer les valeurs de ticks "propres"
         var tickValues: [Double] = []
         var current = niceMin
-        while current <= niceMax {
-            if current >= minValue && current <= maxValue {
+        while current <= niceMax + niceInterval * 0.001 { // Petite tolérance pour éviter les erreurs de floating point
+            if current >= minValue - niceInterval * 0.1 {
                 tickValues.append(current)
             }
             current += niceInterval
         }
         
-        // Si on n'a pas assez de ticks, on ajoute les bornes
-        if tickValues.isEmpty || tickValues.first! > minValue {
-            tickValues.insert(minValue, at: 0)
-        }
-        if tickValues.last! < maxValue {
-            tickValues.append(maxValue)
-        }
-        
         let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 14),
+            .font: NSFont.systemFont(ofSize: 10),
             .foregroundColor: NSColor.white
         ]
         
