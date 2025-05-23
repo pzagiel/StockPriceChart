@@ -1,6 +1,5 @@
 import Cocoa
 
-
 class GraphView: NSView {
     private var stockPrices: [StockPrice] = []
 
@@ -25,9 +24,10 @@ class GraphView: NSView {
         guard !stockPrices.isEmpty else { return }
         guard let context = NSGraphicsContext.current?.cgContext else { return }
 
-        let margin: CGFloat = 50
-        let graphRect = bounds.insetBy(dx: margin, dy: margin)
-
+        let baseMargin: CGFloat = 20
+        let bottomMargin: CGFloat = 40 // Pour les dates
+        let topMargin: CGFloat = 20
+        
         context.setFillColor(NSColor.black.cgColor)
         context.fill(bounds)
 
@@ -35,7 +35,6 @@ class GraphView: NSView {
         let validPrices: [(date: Date, value: Double)] = stockPrices.map {
             (date: $0.date, value: $0.value)
         }
-
 
         guard !validPrices.isEmpty else { return }
 
@@ -49,14 +48,40 @@ class GraphView: NSView {
               maxDate != minDate,
               maxValue != minValue else { return }
 
-        let dateRange = maxDate.timeIntervalSince(minDate)
+        // Calculer la marge gauche nécessaire pour les labels de valeurs
+        let labelAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 14),
+            .foregroundColor: NSColor.white
+        ]
+        
+        let gridLineCount = 5
         let valueRange = maxValue - minValue
+        var maxLabelWidth: CGFloat = 0
+        
+        // Calculer la largeur maximale nécessaire pour tous les labels de valeurs
+        for i in 0...gridLineCount {
+            let value = minValue + (Double(i) / Double(gridLineCount)) * valueRange
+            let label = String(format: "%.2f", value) as NSString
+            let size = label.size(withAttributes: labelAttributes)
+            maxLabelWidth = max(maxLabelWidth, size.width)
+        }
+        
+        // Marge gauche dynamique avec un minimum de sécurité
+        let leftMargin = max(baseMargin, maxLabelWidth + 10)
+        
+        let graphRect = CGRect(
+            x: leftMargin,
+            y: bottomMargin,
+            width: bounds.width - leftMargin - baseMargin,
+            height: bounds.height - bottomMargin - topMargin
+        )
+
+        let dateRange = maxDate.timeIntervalSince(minDate)
 
         // Grille horizontale
         context.setStrokeColor(NSColor.darkGray.cgColor)
         context.setLineWidth(0.5)
 
-        let gridLineCount = 5
         for i in 0...gridLineCount {
             let y = graphRect.minY + CGFloat(i) / CGFloat(gridLineCount) * graphRect.height
             context.move(to: CGPoint(x: graphRect.minX, y: y))
@@ -113,11 +138,6 @@ class GraphView: NSView {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MM/dd"
 
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 10),
-            .foregroundColor: NSColor.white
-        ]
-
         let dateStep = max(1, validPrices.count / 5)
         for i in stride(from: 0, to: validPrices.count, by: dateStep) {
             let date = validPrices[i].date
@@ -129,12 +149,14 @@ class GraphView: NSView {
                        withAttributes: labelAttributes)
         }
 
-        // Labels des valeurs
+        // Labels des valeurs avec positionnement amélioré
         for i in 0...gridLineCount {
             let value = minValue + (Double(i) / Double(gridLineCount)) * valueRange
             let y = graphRect.minY + CGFloat(i) / CGFloat(gridLineCount) * graphRect.height
             let label = String(format: "%.2f", value) as NSString
             let size = label.size(withAttributes: labelAttributes)
+            
+            // Alignement à droite par rapport à la zone graphique
             label.draw(at: CGPoint(x: graphRect.minX - size.width - 5, y: y - size.height / 2),
                        withAttributes: labelAttributes)
         }
@@ -148,6 +170,4 @@ class GraphView: NSView {
         context.addLine(to: CGPoint(x: graphRect.maxX, y: graphRect.minY))
         context.strokePath()
     }
-
 }
-
