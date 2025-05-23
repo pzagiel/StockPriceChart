@@ -199,19 +199,101 @@ class GraphView: NSView {
         context.addLines(between: points)
         context.strokePath()
 
-        // Labels des dates
+        // Formatage intelligent des dates selon la période
+        func getDateFormat(for timeSpan: TimeInterval) -> String {
+            let days = timeSpan / (24 * 60 * 60)
+            
+            if days <= 7 {
+                // Une semaine ou moins : jour + heure
+                return "E HH:mm"
+            } else if days <= 30 {
+                // Un mois ou moins : jour/mois
+                return "dd/MM"
+            } else if days <= 365 {
+                // Une année ou moins : mois (comme vous le souhaitez actuellement)
+                return "MMM"
+            } else if days <= 365 * 3 {
+                // Jusqu'à 3 ans : mois/année
+                return "MMM yy"
+            } else {
+                // Plus de 3 ans : année
+                return "yyyy"
+            }
+        }
+        
+        func getOptimalDateStep(for timeSpan: TimeInterval, dataCount: Int) -> Int {
+            let days = timeSpan / (24 * 60 * 60)
+            
+            if days <= 7 {
+                // Semaine : montrer tous les jours ou tous les 2 jours
+                return max(1, dataCount / 7)
+            } else if days <= 30 {
+                // Mois : montrer environ 6-8 dates
+                return max(1, dataCount / 7)
+            } else if days <= 365 {
+                // Année : montrer environ 6 mois
+                return max(1, dataCount / 6)
+            } else {
+                // Plusieurs années : montrer environ 5-6 points
+                return max(1, dataCount / 6)
+            }
+        }
+        
+        // Labels des dates avec formatage intelligent et évitement des doublons
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MM/dd"
-
-        let dateStep = max(1, validPrices.count / 5)
-        for i in stride(from: 0, to: validPrices.count, by: dateStep) {
+        dateFormatter.locale = Locale(identifier: "fr_FR")
+        dateFormatter.dateFormat = getDateFormat(for: dateRange)
+        
+        let dateStep = getOptimalDateStep(for: dateRange, dataCount: validPrices.count)
+        
+        // Pour éviter le chevauchement, calculer l'espace disponible
+        let availableWidth = graphRect.width
+        let maxLabels = Int(availableWidth / 60) // Environ 60 points par label minimum
+        let finalStep = max(dateStep, validPrices.count / maxLabels)
+        
+        // Garder trace des labels déjà affichés pour éviter les doublons
+        var displayedLabels = Set<String>()
+        var lastDisplayedX: CGFloat = -100 // Position du dernier label affiché
+        
+        for i in stride(from: 0, to: validPrices.count, by: finalStep) {
             let date = validPrices[i].date
             let xRatio = CGFloat(date.timeIntervalSince(minDate) / dateRange)
             let x = graphRect.minX + xRatio * graphRect.width
-            let label = dateFormatter.string(from: date) as NSString
+            let labelText = dateFormatter.string(from: date)
+            let label = labelText as NSString
             let size = label.size(withAttributes: labelAttributes)
-            label.draw(at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
-                       withAttributes: labelAttributes)
+            
+            // Vérifier si ce label n'a pas déjà été affiché et s'il y a assez d'espace
+            if !displayedLabels.contains(labelText) && (x - lastDisplayedX) >= size.width + 10 {
+                displayedLabels.insert(labelText)
+                lastDisplayedX = x
+                label.draw(at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
+                          withAttributes: labelAttributes)
+            }
+        }
+        
+        // Si on n'a pas assez de labels uniques, forcer l'affichage du premier et dernier
+        if displayedLabels.count <= 2 {
+            displayedLabels.removeAll()
+            
+            // Forcer l'affichage de quelques dates clés
+            let keyIndices = [0, validPrices.count / 3, 2 * validPrices.count / 3, validPrices.count - 1]
+            
+            for index in keyIndices {
+                guard index < validPrices.count else { continue }
+                let date = validPrices[index].date
+                let xRatio = CGFloat(date.timeIntervalSince(minDate) / dateRange)
+                let x = graphRect.minX + xRatio * graphRect.width
+                let labelText = dateFormatter.string(from: date)
+                
+                if !displayedLabels.contains(labelText) {
+                    displayedLabels.insert(labelText)
+                    let label = labelText as NSString
+                    let size = label.size(withAttributes: labelAttributes)
+                    label.draw(at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
+                              withAttributes: labelAttributes)
+                }
+            }
         }
 
         // Labels des valeurs avec positionnement amélioré (on skip la première valeur si c'est le minimum)
