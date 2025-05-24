@@ -58,7 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         let searchButton = NSButton(title: "Charger", target: self, action: #selector(searchButtonClicked))
 
         // Créer les boutons de période
-        let periods = ["1d", "1w", "1mo", "3mo", "6mo","ytd", "1y", "2y", "3y", "5y"]
+        let periods = ["1d", "1w", "1mo", "3mo", "6mo","ytd", "1y", "2y", "3y", "5y","max"]
         var periodButtons: [NSButton] = []
         
         for period in periods {
