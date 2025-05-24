@@ -1,335 +1,494 @@
 import Cocoa
 
 class GraphView: NSView {
+    
+    // MARK: - Properties
     private var stockPrices: [StockPrice] = []
-
+    
+    // Configuration constants
+    private struct Constants {
+        static let baseMargin: CGFloat = 20
+        static let bottomMargin: CGFloat = 40
+        static let topMargin: CGFloat = 20
+        static let minLabelSpacing: CGFloat = 60
+        static let labelPadding: CGFloat = 10
+        static let gridLineWidth: CGFloat = 0.5
+        static let mainLineWidth: CGFloat = 2.0
+        static let axisLineWidth: CGFloat = 1.0
+        static let minTicks = 4
+        static let maxTicks = 6
+        static let fontSize: CGFloat = 10
+    }
+    
+    // MARK: - Initialization
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        self.wantsLayer = true
+        setupView()
     }
 
     required init?(coder decoder: NSCoder) {
         super.init(coder: decoder)
+        setupView()
+    }
+    
+    private func setupView() {
         self.wantsLayer = true
     }
 
-    /// Appel à faire depuis le contrôleur pour définir les données
+    // MARK: - Public Interface
     func setData(_ prices: [StockPrice]) {
         self.stockPrices = prices
         self.needsDisplay = true
     }
 
+    // MARK: - Drawing
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        guard !stockPrices.isEmpty else { return }
-        guard let context = NSGraphicsContext.current?.cgContext else { return }
-
-        let baseMargin: CGFloat = 20
-        let bottomMargin: CGFloat = 40 // Pour les dates
-        let topMargin: CGFloat = 20
         
-        context.setFillColor(NSColor.black.cgColor)
-        context.fill(bounds)
-
-        // Convertir les données avec des dates valides uniquement
-        let validPrices: [(date: Date, value: Double)] = stockPrices.map {
-            (date: $0.date, value: $0.value)
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        guard !stockPrices.isEmpty else {
+            drawEmptyState(context: context)
+            return
         }
 
-        guard !validPrices.isEmpty else { return }
-
+        // Prepare data
+        let validPrices = stockPrices.map { (date: $0.date, value: $0.value) }
+        guard let dataRange = calculateDataRange(from: validPrices) else { return }
+        
+        // Setup drawing area
+        let graphRect = calculateGraphRect(for: dataRange.values)
+        
+        // Draw components
+        drawBackground(context: context)
+        drawGrid(context: context, in: graphRect, for: dataRange.values)
+        drawChart(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
+        drawLabels(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
+        //drawAxes(context: context, in: graphRect)
+    }
+    
+    // MARK: - Helper Structures
+    private struct DataRange {
+        let dates: (min: Date, max: Date)
+        let values: (min: Double, max: Double)
+        let dateSpan: TimeInterval
+        let valueSpan: Double
+    }
+    
+    private struct TickInfo {
+        let values: [Double]
+        let interval: Double
+        let niceBounds: (min: Double, max: Double)
+    }
+    
+    // MARK: - Data Processing
+    private func calculateDataRange(from validPrices: [(date: Date, value: Double)]) -> DataRange? {
+        guard !validPrices.isEmpty else { return nil }
+        
         let dates = validPrices.map { $0.date }
         let values = validPrices.map { $0.value }
-
+        
         guard let minDate = dates.min(),
               let maxDate = dates.max(),
               let minValue = values.min(),
               let maxValue = values.max(),
               maxDate != minDate,
-              maxValue != minValue else { return }
-
-        // Fonction pour calculer un intervalle "propre"
-        func calculateNiceInterval(_ range: Double, _ targetTicks: Int) -> Double {
-            let roughInterval = range / Double(targetTicks - 1)
-            let magnitude = pow(10.0, floor(log10(roughInterval)))
-            let normalizedInterval = roughInterval / magnitude
-            
-            let niceInterval: Double
-            if normalizedInterval <= 1.0 {
-                niceInterval = 1.0
-            } else if normalizedInterval <= 2.0 {
-                niceInterval = 2.0
-            } else if normalizedInterval <= 5.0 {
-                niceInterval = 5.0
-            } else {
-                niceInterval = 10.0
-            }
-            
-            return niceInterval * magnitude
+              maxValue != minValue else { return nil }
+        
+        return DataRange(
+            dates: (min: minDate, max: maxDate),
+            values: (min: minValue, max: maxValue),
+            dateSpan: maxDate.timeIntervalSince(minDate),
+            valueSpan: maxValue - minValue
+        )
+    }
+    
+    private func calculateNiceInterval(_ range: Double, _ targetTicks: Int) -> Double {
+        let roughInterval = range / Double(targetTicks - 1)
+        let magnitude = pow(10.0, floor(log10(roughInterval)))
+        let normalizedInterval = roughInterval / magnitude
+        
+        let niceInterval: Double
+        if normalizedInterval <= 1.0 {
+            niceInterval = 1.0
+        } else if normalizedInterval <= 2.0 {
+            niceInterval = 2.0
+        } else if normalizedInterval <= 5.0 {
+            niceInterval = 5.0
+        } else {
+            niceInterval = 10.0
         }
         
-        // Calculer les valeurs "propres" pour les labels
-        let minTicks = 4  // Minimum de lignes souhaitées
-        let maxTicks = 6  // Maximum de lignes souhaitées
-        let valueRange = maxValue - minValue
+        return niceInterval * magnitude
+    }
+    
+    private func calculateTickInfo(for valueRange: (min: Double, max: Double)) -> TickInfo {
+        let range = valueRange.max - valueRange.min
         
-        // Essayer différents nombres de ticks pour trouver le meilleur
         var bestInterval = 0.0
-        var bestTickCount = 0
+        var bestTicks: [Double] = []
+        var bestBounds = (min: 0.0, max: 0.0)
         
-        for targetTicks in minTicks...maxTicks {
-            let interval = calculateNiceInterval(valueRange, targetTicks)
-            let niceMin = floor(minValue / interval) * interval
-            let niceMax = ceil(maxValue / interval) * interval
+        for targetTicks in Constants.minTicks...Constants.maxTicks {
+            let interval = calculateNiceInterval(range, targetTicks)
+            let niceMin = floor(valueRange.min / interval) * interval
+            let niceMax = ceil(valueRange.max / interval) * interval
             let actualTicks = Int((niceMax - niceMin) / interval) + 1
             
-            // Privilégier les configurations qui donnent un nombre raisonnable de ticks
-            if actualTicks >= minTicks && actualTicks <= maxTicks {
+            if actualTicks >= Constants.minTicks && actualTicks <= Constants.maxTicks {
                 bestInterval = interval
-                bestTickCount = actualTicks
+                bestBounds = (min: niceMin, max: niceMax)
                 break
-            } else if bestInterval == 0.0 { // Garder la première option comme fallback
+            } else if bestInterval == 0.0 {
                 bestInterval = interval
-                bestTickCount = actualTicks
+                bestBounds = (min: niceMin, max: niceMax)
             }
         }
         
-        let niceInterval = bestInterval
-        let niceMin = floor(minValue / niceInterval) * niceInterval
-        let niceMax = ceil(maxValue / niceInterval) * niceInterval
-        
-        // Générer les valeurs de ticks "propres"
+        // Generate tick values
         var tickValues: [Double] = []
-        var current = niceMin
-        while current <= niceMax + niceInterval * 0.001 { // Petite tolérance pour éviter les erreurs de floating point
-            if current >= minValue - niceInterval * 0.1 {
+        var current = bestBounds.min
+        while current <= bestBounds.max + bestInterval * 0.001 {
+            if current >= valueRange.min - bestInterval * 0.1 {
                 tickValues.append(current)
             }
-            current += niceInterval
+            current += bestInterval
         }
         
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 10),
-            .foregroundColor: NSColor.white
-        ]
+        return TickInfo(values: tickValues, interval: bestInterval, niceBounds: bestBounds)
+    }
+    
+    private func calculateGraphRect(for valueRange: (min: Double, max: Double)) -> CGRect {
+        let tickInfo = calculateTickInfo(for: valueRange)
+        let labelAttributes = createLabelAttributes()
         
-        var maxLabelWidth: CGFloat = 0
-        
-        // Calculer la largeur maximale nécessaire pour tous les labels de valeurs
-        for value in tickValues {
-            let label: String
-            if niceInterval >= 1.0 {
-                label = String(format: "%.0f", value)
-            } else if niceInterval >= 0.1 {
-                label = String(format: "%.1f", value)
-            } else {
-                label = String(format: "%.2f", value)
-            }
-            let labelString = label as NSString
-            let size = labelString.size(withAttributes: labelAttributes)
-            maxLabelWidth = max(maxLabelWidth, size.width)
+        // Calculate maximum label width
+        let maxLabelWidth = tickInfo.values.reduce(CGFloat(0)) { maxWidth, value in
+            let label = formatValue(value, interval: tickInfo.interval)
+            let size = (label as NSString).size(withAttributes: labelAttributes)
+            return max(maxWidth, size.width)
         }
         
-        // Marge gauche dynamique avec un minimum de sécurité
-        let leftMargin = max(baseMargin, maxLabelWidth + 10)
+        let leftMargin = max(Constants.baseMargin, maxLabelWidth + Constants.labelPadding)
         
-        let graphRect = CGRect(
+        return CGRect(
             x: leftMargin,
-            y: bottomMargin,
-            width: bounds.width - leftMargin - baseMargin,
-            height: bounds.height - bottomMargin - topMargin
+            y: Constants.bottomMargin,
+            width: bounds.width - leftMargin - Constants.baseMargin,
+            height: bounds.height - Constants.bottomMargin - Constants.topMargin
         )
-
-        let dateRange = maxDate.timeIntervalSince(minDate)
-
-        // Grille horizontale basée sur les valeurs "propres"
+    }
+    
+    // MARK: - Drawing Methods
+    private func drawEmptyState(context: CGContext) {
+        context.setFillColor(NSColor.black.cgColor)
+        context.fill(bounds)
+        
+        let message = "Aucune donnée disponible"
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 16),
+            .foregroundColor: NSColor.lightGray
+        ]
+        let size = (message as NSString).size(withAttributes: attributes)
+        let point = CGPoint(
+            x: (bounds.width - size.width) / 2,
+            y: (bounds.height - size.height) / 2
+        )
+        (message as NSString).draw(at: point, withAttributes: attributes)
+    }
+    
+    private func drawBackground(context: CGContext) {
+        context.setFillColor(NSColor.black.cgColor)
+        context.fill(bounds)
+    }
+    
+    private func drawGrid(context: CGContext, in graphRect: CGRect, for valueRange: (min: Double, max: Double)) {
+        let tickInfo = calculateTickInfo(for: valueRange)
+        
         context.setStrokeColor(NSColor.darkGray.cgColor)
-        context.setLineWidth(0.5)
-
-        for value in tickValues {
-            let yRatio = CGFloat((value - minValue) / valueRange)
+        context.setLineWidth(Constants.gridLineWidth)
+        
+        for value in tickInfo.values {
+            let yRatio = CGFloat((value - valueRange.min) / (valueRange.max - valueRange.min))
             let y = graphRect.minY + yRatio * graphRect.height
+            
             context.move(to: CGPoint(x: graphRect.minX, y: y))
             context.addLine(to: CGPoint(x: graphRect.maxX, y: y))
         }
         context.strokePath()
-
-        // Points de la courbe
-        let points: [CGPoint] = validPrices.map { item in
-            let xRatio = CGFloat(item.date.timeIntervalSince(minDate) / dateRange)
-            let yRatio = CGFloat((item.value - minValue) / valueRange)
+    }
+    
+    private func drawChart(context: CGContext, in graphRect: CGRect,
+                          with validPrices: [(date: Date, value: Double)],
+                          dataRange: DataRange) {
+        
+        let points = calculatePoints(from: validPrices, in: graphRect, dataRange: dataRange)
+        
+        // Draw gradient fill
+        drawGradientFill(context: context, points: points, in: graphRect)
+        
+        // Draw main line
+        drawMainLine(context: context, points: points)
+    }
+    
+    private func calculatePoints(from validPrices: [(date: Date, value: Double)],
+                               in graphRect: CGRect,
+                               dataRange: DataRange) -> [CGPoint] {
+        return validPrices.map { item in
+            let xRatio = CGFloat(item.date.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
+            let yRatio = CGFloat((item.value - dataRange.values.min) / dataRange.valueSpan)
             let x = graphRect.minX + xRatio * graphRect.width
             let y = graphRect.minY + yRatio * graphRect.height
             return CGPoint(x: x, y: y)
         }
-
-        // Dégradé
-        if let first = points.first, let last = points.last {
-            let fillPath = CGMutablePath()
-            fillPath.move(to: CGPoint(x: first.x, y: graphRect.minY))
-            for pt in points {
-                fillPath.addLine(to: pt)
-            }
-            fillPath.addLine(to: CGPoint(x: last.x, y: graphRect.minY))
-            fillPath.closeSubpath()
-
-            context.saveGState()
-            context.addPath(fillPath)
-            context.clip()
-
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let gradient = CGGradient(colorsSpace: colorSpace,
-                                      colors: [
-                                        NSColor.green.withAlphaComponent(0.02).cgColor,
-                                        NSColor.green.withAlphaComponent(0.35).cgColor
-                                      ] as CFArray,
-                                      locations: [0.0, 1.0])!
-
-            context.drawLinearGradient(gradient,
-                                       start: CGPoint(x: 0, y: graphRect.minY + 1),
-                                       end: CGPoint(x: 0, y: graphRect.maxY),
-                                       options: [])
-            context.restoreGState()
+    }
+    
+    private func drawGradientFill(context: CGContext, points: [CGPoint], in graphRect: CGRect) {
+        guard let first = points.first, let last = points.last else { return }
+        
+        let fillPath = CGMutablePath()
+        fillPath.move(to: CGPoint(x: first.x, y: graphRect.minY))
+        for point in points {
+            fillPath.addLine(to: point)
         }
+        fillPath.addLine(to: CGPoint(x: last.x, y: graphRect.minY))
+        fillPath.closeSubpath()
 
-        // Ligne principale
+        context.saveGState()
+        context.addPath(fillPath)
+        context.clip()
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let gradient = CGGradient(
+            colorsSpace: colorSpace,
+            colors: [
+                NSColor.green.withAlphaComponent(0.02).cgColor,
+                NSColor.green.withAlphaComponent(0.35).cgColor
+            ] as CFArray,
+            locations: [0.0, 1.0]
+        ) else { return }
+
+        context.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: 0, y: graphRect.minY + 1),
+            end: CGPoint(x: 0, y: graphRect.maxY),
+            options: []
+        )
+        context.restoreGState()
+    }
+    
+    private func drawMainLine(context: CGContext, points: [CGPoint]) {
+        guard !points.isEmpty else { return }
+        
         context.setStrokeColor(NSColor.green.cgColor)
-        context.setLineWidth(2.0)
+        context.setLineWidth(Constants.mainLineWidth)
         context.beginPath()
         context.addLines(between: points)
         context.strokePath()
-
-        // Formatage intelligent des dates selon la période
-        func getDateFormat(for timeSpan: TimeInterval) -> String {
-            let days = timeSpan / (24 * 60 * 60)
-            
-            if days <= 7 {
-                // Une semaine ou moins : jour + heure
-                return "E HH:mm"
-            } else if days <= 30 {
-                // Un mois ou moins : jour/mois
-                return "dd/MM"
-            } else if days <= 365 {
-                // Une année ou moins : mois (comme vous le souhaitez actuellement)
-                return "MMM"
-            } else if days <= 365 * 3 {
-                // Jusqu'à 3 ans : mois/année
-                return "MMM yy"
-            } else {
-                // Plus de 3 ans : année
-                return "yyyy"
-            }
-        }
+    }
+    
+    private func drawLabels(context: CGContext, in graphRect: CGRect,
+                           with validPrices: [(date: Date, value: Double)],
+                           dataRange: DataRange) {
+        drawValueLabels(context: context, in: graphRect, for: dataRange.values)
+        drawDateLabels(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
+    }
+    
+    private func drawValueLabels(context: CGContext, in graphRect: CGRect, for valueRange: (min: Double, max: Double)) {
+        let tickInfo = calculateTickInfo(for: valueRange)
+        let labelAttributes = createLabelAttributes()
         
-        func getOptimalDateStep(for timeSpan: TimeInterval, dataCount: Int) -> Int {
-            let days = timeSpan / (24 * 60 * 60)
-            
-            if days <= 7 {
-                // Semaine : montrer tous les jours ou tous les 2 jours
-                return max(1, dataCount / 7)
-            } else if days <= 30 {
-                // Mois : montrer environ 6-8 dates
-                return max(1, dataCount / 7)
-            } else if days <= 365 {
-                // Année : montrer environ 6 mois
-                return max(1, dataCount / 6)
-            } else {
-                // Plusieurs années : montrer environ 5-6 points
-                return max(1, dataCount / 6)
-            }
-        }
-        
-        // Labels des dates avec formatage intelligent et évitement des doublons
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "fr_FR")
-        dateFormatter.dateFormat = getDateFormat(for: dateRange)
-        
-        let dateStep = getOptimalDateStep(for: dateRange, dataCount: validPrices.count)
-        
-        // Pour éviter le chevauchement, calculer l'espace disponible
-        let availableWidth = graphRect.width
-        let maxLabels = Int(availableWidth / 60) // Environ 60 points par label minimum
-        let finalStep = max(dateStep, validPrices.count / maxLabels)
-        
-        // Garder trace des labels déjà affichés pour éviter les doublons
-        var displayedLabels = Set<String>()
-        var lastDisplayedX: CGFloat = -100 // Position du dernier label affiché
-        
-        for i in stride(from: 0, to: validPrices.count, by: finalStep) {
-            let date = validPrices[i].date
-            let xRatio = CGFloat(date.timeIntervalSince(minDate) / dateRange)
-            let x = graphRect.minX + xRatio * graphRect.width
-            let labelText = dateFormatter.string(from: date)
-            let label = labelText as NSString
-            let size = label.size(withAttributes: labelAttributes)
-            
-            // Vérifier si ce label n'a pas déjà été affiché et s'il y a assez d'espace
-            if !displayedLabels.contains(labelText) && (x - lastDisplayedX) >= size.width + 10 {
-                displayedLabels.insert(labelText)
-                lastDisplayedX = x
-                label.draw(at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
-                          withAttributes: labelAttributes)
-            }
-        }
-        
-        // Si on n'a pas assez de labels uniques, forcer l'affichage du premier et dernier
-        if displayedLabels.count <= 2 {
-            displayedLabels.removeAll()
-            
-            // Forcer l'affichage de quelques dates clés
-            let keyIndices = [0, validPrices.count / 3, 2 * validPrices.count / 3, validPrices.count - 1]
-            
-            for index in keyIndices {
-                guard index < validPrices.count else { continue }
-                let date = validPrices[index].date
-                let xRatio = CGFloat(date.timeIntervalSince(minDate) / dateRange)
-                let x = graphRect.minX + xRatio * graphRect.width
-                let labelText = dateFormatter.string(from: date)
-                
-                if !displayedLabels.contains(labelText) {
-                    displayedLabels.insert(labelText)
-                    let label = labelText as NSString
-                    let size = label.size(withAttributes: labelAttributes)
-                    label.draw(at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
-                              withAttributes: labelAttributes)
-                }
-            }
-        }
-
-        // Labels des valeurs avec positionnement amélioré (on skip la première valeur si c'est le minimum)
-        for (index, value) in tickValues.enumerated() {
-            // Skip le premier label s'il correspond au minimum (sur l'axe horizontal)
-            if index == 0 && abs(value - minValue) < 0.001 {
+        for (index, value) in tickInfo.values.enumerated() {
+            // Skip first label if it's at the minimum
+            if index == 0 && abs(value - valueRange.min) < 0.001 {
                 continue
             }
             
-            let yRatio = CGFloat((value - minValue) / valueRange)
+            let yRatio = CGFloat((value - valueRange.min) / (valueRange.max - valueRange.min))
             let y = graphRect.minY + yRatio * graphRect.height
             
-            let label: String
-            if niceInterval >= 1.0 {
-                label = String(format: "%.0f", value)
-            } else if niceInterval >= 0.1 {
-                label = String(format: "%.1f", value)
-            } else {
-                label = String(format: "%.2f", value)
-            }
-            
+            let label = formatValue(value, interval: tickInfo.interval)
             let labelString = label as NSString
             let size = labelString.size(withAttributes: labelAttributes)
             
-            // Alignement à droite par rapport à la zone graphique
-            labelString.draw(at: CGPoint(x: graphRect.minX - size.width - 5, y: y - size.height / 2),
-                       withAttributes: labelAttributes)
+            labelString.draw(
+                at: CGPoint(x: graphRect.minX - size.width - 5, y: y - size.height / 2),
+                withAttributes: labelAttributes
+            )
         }
-
-        // Axes
+    }
+    
+    private func drawDateLabels(context: CGContext, in graphRect: CGRect,
+                               with validPrices: [(date: Date, value: Double)],
+                               dataRange: DataRange) {
+        let formatter = createDateFormatter(for: dataRange.dateSpan)
+        let labelAttributes = createLabelAttributes()
+        
+        // Calculer le nombre optimal de labels
+        let availableWidth = graphRect.width
+        let estimatedLabelWidth: CGFloat = 80 // Largeur estimée d'un label de date
+        let maxLabels = max(2, Int(availableWidth / estimatedLabelWidth))
+        
+        // Si on a moins de données que de labels souhaités, afficher tous les points
+        let actualMaxLabels = min(maxLabels, validPrices.count)
+        
+        // Générer les indices de manière uniforme
+        var labelIndices: [Int] = []
+        
+        if actualMaxLabels == 1 {
+            // Cas spécial : un seul label au milieu
+            labelIndices = [validPrices.count / 2]
+        } else if actualMaxLabels == 2 {
+            // Cas spécial : premier et dernier
+            labelIndices = [0, validPrices.count - 1]
+        } else {
+            // Distribution uniforme pour 3 labels ou plus
+            for i in 0..<actualMaxLabels {
+                let index: Int
+                if i == 0 {
+                    index = 0 // Premier élément
+                } else if i == actualMaxLabels - 1 {
+                    index = validPrices.count - 1 // Dernier élément
+                } else {
+                    // Éléments intermédiaires distribués uniformément
+                    let step = Double(validPrices.count - 1) / Double(actualMaxLabels - 1)
+                    index = Int(round(Double(i) * step))
+                }
+                labelIndices.append(index)
+            }
+        }
+        
+        // Supprimer les doublons et trier
+        labelIndices = Array(Set(labelIndices)).sorted()
+        
+        var displayedLabels = Set<String>()
+        
+        for index in labelIndices {
+            guard index >= 0 && index < validPrices.count else { continue }
+            
+            let date = validPrices[index].date
+            let labelText = formatter.string(from: date)
+            
+            // Éviter les doublons de texte (dates identiques formatées)
+            if displayedLabels.contains(labelText) {
+                continue
+            }
+            displayedLabels.insert(labelText)
+            
+            // Calculer la position X basée sur la date réelle
+            let xRatio = CGFloat(date.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
+            let x = graphRect.minX + xRatio * graphRect.width
+            
+            // Calculer la taille du label
+            let size = (labelText as NSString).size(withAttributes: labelAttributes)
+            
+            // Centrer le label et s'assurer qu'il reste dans les limites du graphique
+            var labelX = x - size.width / 2
+            
+            // Ajuster pour rester dans les limites
+            if labelX < graphRect.minX {
+                labelX = graphRect.minX
+            } else if labelX + size.width > graphRect.maxX {
+                labelX = graphRect.maxX - size.width
+            }
+            
+            // Dessiner le label
+            (labelText as NSString).draw(
+                at: CGPoint(x: labelX, y: graphRect.minY - size.height - 5),
+                withAttributes: labelAttributes
+            )
+        }
+    }
+    
+    private func drawFallbackDateLabels(context: CGContext, in graphRect: CGRect,
+                                       with validPrices: [(date: Date, value: Double)],
+                                       dataRange: DataRange, formatter: DateFormatter,
+                                       labelAttributes: [NSAttributedString.Key: Any]) {
+        var displayedLabels = Set<String>()
+        let keyIndices = [0, validPrices.count / 3, 2 * validPrices.count / 3, validPrices.count - 1]
+        
+        for index in keyIndices {
+            guard index < validPrices.count else { continue }
+            let date = validPrices[index].date
+            let xRatio = CGFloat(date.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
+            let x = graphRect.minX + xRatio * graphRect.width
+            let labelText = formatter.string(from: date)
+            
+            if !displayedLabels.contains(labelText) {
+                displayedLabels.insert(labelText)
+                let size = (labelText as NSString).size(withAttributes: labelAttributes)
+                (labelText as NSString).draw(
+                    at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
+                    withAttributes: labelAttributes
+                )
+            }
+        }
+    }
+    
+    private func drawAxes(context: CGContext, in graphRect: CGRect) {
         context.setStrokeColor(NSColor.white.cgColor)
-        context.setLineWidth(1.0)
+        context.setLineWidth(Constants.axisLineWidth)
         context.move(to: CGPoint(x: graphRect.minX, y: graphRect.minY))
         context.addLine(to: CGPoint(x: graphRect.minX, y: graphRect.maxY))
         context.move(to: CGPoint(x: graphRect.minX, y: graphRect.minY))
         context.addLine(to: CGPoint(x: graphRect.maxX, y: graphRect.minY))
         context.strokePath()
+    }
+    
+    // MARK: - Utility Methods
+    private func createLabelAttributes() -> [NSAttributedString.Key: Any] {
+        return [
+            .font: NSFont.systemFont(ofSize: Constants.fontSize),
+            .foregroundColor: NSColor.white
+        ]
+    }
+    
+    private func formatValue(_ value: Double, interval: Double) -> String {
+        if interval >= 1.0 {
+            return String(format: "%.0f", value)
+        } else if interval >= 0.1 {
+            return String(format: "%.1f", value)
+        } else {
+            return String(format: "%.2f", value)
+        }
+    }
+    
+    private func createDateFormatter(for timeSpan: TimeInterval) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        
+        let days = timeSpan / (24 * 60 * 60)
+        
+        if days <= 7 {
+            formatter.dateFormat = "E HH:mm"
+        } else if days <= 30 {
+            formatter.dateFormat = "dd/MM"
+        } else if days <= 365 {
+            formatter.dateFormat = "MMM"
+        } else if days <= 365 * 3 {
+            formatter.dateFormat = "MMM yy"
+        } else {
+            formatter.dateFormat = "yyyy"
+        }
+        
+        return formatter
+    }
+    
+    private func calculateOptimalDateStep(for timeSpan: TimeInterval, dataCount: Int) -> Int {
+        let days = timeSpan / (24 * 60 * 60)
+        let availableWidth = bounds.width - 2 * Constants.baseMargin
+        let maxLabels = Int(availableWidth / Constants.minLabelSpacing)
+        
+        let baseStep: Int
+        if days <= 7 {
+            baseStep = max(1, dataCount / 7)
+        } else if days <= 30 {
+            baseStep = max(1, dataCount / 7)
+        } else if days <= 365 {
+            baseStep = max(1, dataCount / 6)
+        } else {
+            baseStep = max(1, dataCount / 6)
+        }
+        
+        return max(baseStep, dataCount / maxLabels)
     }
 }
