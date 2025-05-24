@@ -68,6 +68,10 @@ class GraphView: NSView {
         // Setup drawing area
         let graphRect = calculateGraphRect(for: dataRange.values)
         
+        // IMPORTANT: Stocker ces valeurs dans les propriétés de l'instance
+        self.graphRect = graphRect
+        self.dataRange = dataRange
+        
         // Draw components
         drawBackground(context: context)
         drawGrid(context: context, in: graphRect, for: dataRange.values)
@@ -414,31 +418,6 @@ class GraphView: NSView {
         return formatter
     }
     
-    private func drawFallbackDateLabels(context: CGContext, in graphRect: CGRect,
-                                       with validPrices: [(date: Date, value: Double)],
-                                       dataRange: DataRange, formatter: DateFormatter,
-                                       labelAttributes: [NSAttributedString.Key: Any]) {
-        var displayedLabels = Set<String>()
-        let keyIndices = [0, validPrices.count / 3, 2 * validPrices.count / 3, validPrices.count - 1]
-        
-        for index in keyIndices {
-            guard index < validPrices.count else { continue }
-            let date = validPrices[index].date
-            let xRatio = CGFloat(date.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
-            let x = graphRect.minX + xRatio * graphRect.width
-            let labelText = formatter.string(from: date)
-            
-            if !displayedLabels.contains(labelText) {
-                displayedLabels.insert(labelText)
-                let size = (labelText as NSString).size(withAttributes: labelAttributes)
-                (labelText as NSString).draw(
-                    at: CGPoint(x: x - size.width / 2, y: graphRect.minY - size.height - 5),
-                    withAttributes: labelAttributes
-                )
-            }
-        }
-    }
-    
     private func drawAxes(context: CGContext, in graphRect: CGRect) {
         context.setStrokeColor(NSColor.white.cgColor)
         context.setLineWidth(Constants.axisLineWidth)
@@ -467,27 +446,6 @@ class GraphView: NSView {
         }
     }
     
-//    private func createDateFormatter(for timeSpan: TimeInterval) -> DateFormatter {
-//        let formatter = DateFormatter()
-//        formatter.locale = Locale(identifier: "fr_FR")
-//
-//        let days = timeSpan / (24 * 60 * 60)
-//
-//        if days <= 7 {
-//            formatter.dateFormat = "E HH:mm"
-//        } else if days <= 30 {
-//            formatter.dateFormat = "dd/MM"
-//        } else if days <= 365 {
-//            formatter.dateFormat = "MMM"
-//        } else if days <= 365 * 3 {
-//            formatter.dateFormat = "MMM yy"
-//        } else {
-//            formatter.dateFormat = "yyyy"
-//        }
-//
-//        return formatter
-//    }
-    
     private func calculateOptimalDateStep(for timeSpan: TimeInterval, dataCount: Int) -> Int {
         let days = timeSpan / (24 * 60 * 60)
         let availableWidth = bounds.width - 2 * Constants.baseMargin
@@ -507,8 +465,7 @@ class GraphView: NSView {
         return max(baseStep, dataCount / maxLabels)
     }
     
-   
-
+    // MARK: - Mouse Tracking Setup
     private func setupMouseTracking() {
         let options: NSTrackingArea.Options = [
             .activeInKeyWindow,
@@ -585,7 +542,7 @@ class GraphView: NSView {
         needsDisplay = true
     }
 
-    // MARK: - Crosshair Drawing (à ajouter à la fin de la méthode draw(_:))
+    // MARK: - Crosshair Drawing
     private func drawCrosshair(context: CGContext, in rect: CGRect,
                               with validPrices: [(date: Date, value: Double)],
                               dataRange: DataRange) {
