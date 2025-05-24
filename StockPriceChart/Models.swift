@@ -20,10 +20,15 @@ struct Chart: Codable {
 struct ChartResult: Codable {
     let timestamp: [Int]
     let indicators: Indicators
+    let meta:meta
 }
 
 struct Indicators: Codable {
     let quote: [Quote]
+}
+
+struct meta: Codable {
+    let shortName: String
 }
 
 struct Quote: Codable {
