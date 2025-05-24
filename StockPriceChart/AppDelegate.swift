@@ -22,7 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         window.center()
         window.title = "Graphique du cours de l'action"
         let view = GraphView()
-        loadDataFromYahoo(from: "BABA",into: view)
+        loadDataFromYahoo(from: "373220.KS",into: view)
         window.contentView = view
         window.makeKeyAndOrderFront(nil)
     }
@@ -48,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         window.title = "Graphique du cours de l'action"
 
         // Créer les sous-vues
-        tickerField = NSTextField(string: "BABA")
+        tickerField = NSTextField(string: "0P0001KVR5.F")
         tickerField.placeholderString = "Ticker"
         tickerField.frame.size.width = 100
         tickerField.delegate = self
@@ -88,13 +88,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         window.makeKeyAndOrderFront(nil)
 
         // Charger les données initiales
-        loadDataFromYahoo(from: "BABA", into: graphView)
+        //Intéressant car ses données pose problème, manque un chiffre label ordonnées !
+        // H2O Vivace 0P0001KVR5.F
+        // LG CATL 373220.KS
+        loadDataFromYahoo(from: "0P0001KVR5.F", into: graphView)
     }
 
 
     
     func loadDataFromYahoo(from ticker: String, into graphView: GraphView) {
-        print("https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&range=1mo")
+        //print("https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&range=1mo")
         guard let url = URL(string: "https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&range=ytd") else {
             print("URL invalide")
             return
