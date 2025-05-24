@@ -619,12 +619,12 @@ class GraphView: NSView {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "fr_FR")
         dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
+        //dateFormatter.timeStyle = .short
         
         let dateText = dateFormatter.string(from: dataPoint.date)
         let valueText = String(format: "%.2f", dataPoint.value)
         
-        let tooltipText = "\(dateText)\n\(valueText)"
+        let tooltipText = "\(valueText)\n\(dateText)"
         
         // Attributs du texte
         let attributes: [NSAttributedString.Key: Any] = [
