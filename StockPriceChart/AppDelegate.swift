@@ -2,6 +2,7 @@ import Cocoa
 
 var graphView: GraphView!
 var tickerField: NSTextField!
+var shortNameField: NSTextField!
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     var window: NSWindow!
@@ -47,14 +48,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
                           backing: .buffered,
                           defer: false)
         window.center()
-        window.title = "Graphique du cours de l'action"
+        window.title = ""
+        //window.title = shortNameField.stringValue
 
         // Créer le champ ticker et bouton de recherche
         tickerField = NSTextField(string: "0P0001KVR5.F")
         tickerField.placeholderString = "Ticker"
         tickerField.frame.size.width = 150
         tickerField.delegate = self
-
+        
+        shortNameField = NSTextField(string: "Test")
+        shortNameField.placeholderString = "shortName"
+        shortNameField.frame.size.width = 150
+        shortNameField.delegate = self
         let searchButton = NSButton(title: "Charger", target: self, action: #selector(searchButtonClicked))
 
         // Créer les boutons de période
@@ -75,6 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         searchBar.orientation = .horizontal
         searchBar.spacing = 8
         searchBar.addArrangedSubview(tickerField)
+        searchBar.addArrangedSubview(shortNameField)
         searchBar.addArrangedSubview(searchButton)
 
         // Stack horizontale pour les boutons de période
@@ -155,6 +162,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
                 }
 
                 let timestamps = result.timestamp
+                //self.window.title=result.meta.shortName
+                DispatchQueue.main.async {
+                    self.window.title = result.meta.shortName
+                }
+
                 let closes = result.indicators.quote.first?.close ?? []
 
                 var prices: [StockPrice] = []
