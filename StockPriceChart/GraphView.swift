@@ -5,6 +5,15 @@ class GraphView: NSView {
     // MARK: - Properties
     private var stockPrices: [StockPrice] = []
     
+    // Nouvelles propriétés à ajouter dans la classe GraphView
+    private var isTrackingMouse = false
+    private var currentMousePosition: CGPoint?
+    private var currentDataPoint: (date: Date, value: Double)?
+    private var graphRect: CGRect = .zero
+    private var dataRange: DataRange?
+    private var trackingArea: NSTrackingArea?
+    
+    
     // Configuration constants
     private struct Constants {
         static let baseMargin: CGFloat = 20
@@ -33,6 +42,7 @@ class GraphView: NSView {
     
     private func setupView() {
         self.wantsLayer = true
+        setupMouseTracking()
     }
 
     // MARK: - Public Interface
@@ -63,7 +73,9 @@ class GraphView: NSView {
         drawGrid(context: context, in: graphRect, for: dataRange.values)
         drawChart(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
         drawLabels(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
-        //drawAxes(context: context, in: graphRect)
+        drawAxes(context: context, in: graphRect)
+        // NOUVEAU: Dessiner le crosshair interactif
+        drawCrosshair(context: context, in: graphRect, with: validPrices, dataRange: dataRange)
     }
     
     // MARK: - Helper Structures
@@ -493,5 +505,225 @@ class GraphView: NSView {
         }
         
         return max(baseStep, dataCount / maxLabels)
+    }
+    
+   
+
+    private func setupMouseTracking() {
+        let options: NSTrackingArea.Options = [
+            .activeInKeyWindow,
+            .mouseMoved,
+            .mouseEnteredAndExited
+        ]
+        
+        if let existingArea = trackingArea {
+            removeTrackingArea(existingArea)
+        }
+        
+        trackingArea = NSTrackingArea(
+            rect: bounds,
+            options: options,
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(trackingArea!)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        setupMouseTracking()
+    }
+
+    // MARK: - Mouse Events
+    override func mouseEntered(with event: NSEvent) {
+        super.mouseEntered(with: event)
+        isTrackingMouse = true
+        updateCrosshair(with: event)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        isTrackingMouse = false
+        currentMousePosition = nil
+        currentDataPoint = nil
+        needsDisplay = true
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        if isTrackingMouse {
+            updateCrosshair(with: event)
+        }
+    }
+
+    private func updateCrosshair(with event: NSEvent) {
+        guard !stockPrices.isEmpty,
+              let dataRange = self.dataRange else { return }
+        
+        let locationInView = convert(event.locationInWindow, from: nil)
+        
+        // Vérifier si la souris est dans la zone du graphique
+        guard graphRect.contains(locationInView) else {
+            if isTrackingMouse {
+                currentMousePosition = nil
+                currentDataPoint = nil
+                needsDisplay = true
+            }
+            return
+        }
+        
+        currentMousePosition = locationInView
+        
+        // Trouver le point de données le plus proche
+        let xRatio = (locationInView.x - graphRect.minX) / graphRect.width
+        let targetIndex = max(0, min(stockPrices.count - 1,
+                                    Int(round(Double(xRatio) * Double(stockPrices.count - 1)))))
+        
+        let stockPrice = stockPrices[targetIndex]
+        currentDataPoint = (date: stockPrice.date, value: stockPrice.value)
+        
+        needsDisplay = true
+    }
+
+    // MARK: - Crosshair Drawing (à ajouter à la fin de la méthode draw(_:))
+    private func drawCrosshair(context: CGContext, in rect: CGRect,
+                              with validPrices: [(date: Date, value: Double)],
+                              dataRange: DataRange) {
+        guard isTrackingMouse,
+              let mousePos = currentMousePosition,
+              let dataPoint = currentDataPoint,
+              rect.contains(mousePos) else { return }
+        
+        // Calculer la position exacte du point sur la courbe
+        let xRatio = (dataPoint.date.timeIntervalSince(dataRange.dates.min)) / dataRange.dateSpan
+        let yRatio = (dataPoint.value - dataRange.values.min) / dataRange.valueSpan
+        
+        let pointX = rect.minX + CGFloat(xRatio) * rect.width
+        let pointY = rect.minY + CGFloat(yRatio) * rect.height
+        let curvePoint = CGPoint(x: pointX, y: pointY)
+        
+        // Dessiner les lignes de crosshair
+        drawCrosshairLines(context: context, at: curvePoint, in: rect)
+        
+        // Dessiner le point sur la courbe
+        drawCurvePoint(context: context, at: curvePoint)
+        
+        // Dessiner le tooltip
+        drawTooltip(context: context, at: curvePoint, dataPoint: dataPoint, in: rect)
+    }
+
+    private func drawCrosshairLines(context: CGContext, at point: CGPoint, in rect: CGRect) {
+        context.saveGState()
+        
+        // Style des lignes de crosshair
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.5).cgColor)
+        context.setLineWidth(1.0)
+        context.setLineDash(phase: 0, lengths: [4, 2])
+        
+        // Ligne verticale
+        context.move(to: CGPoint(x: point.x, y: rect.minY))
+        context.addLine(to: CGPoint(x: point.x, y: rect.maxY))
+        
+        // Ligne horizontale
+        context.move(to: CGPoint(x: rect.minX, y: point.y))
+        context.addLine(to: CGPoint(x: rect.maxX, y: point.y))
+        
+        context.strokePath()
+        context.restoreGState()
+    }
+
+    private func drawCurvePoint(context: CGContext, at point: CGPoint) {
+        context.saveGState()
+        
+        // Cercle blanc avec bordure verte
+        let radius: CGFloat = 4
+        let circleRect = CGRect(
+            x: point.x - radius,
+            y: point.y - radius,
+            width: radius * 2,
+            height: radius * 2
+        )
+        
+        // Remplissage blanc
+        context.setFillColor(NSColor.white.cgColor)
+        context.fillEllipse(in: circleRect)
+        
+        // Bordure verte
+        context.setStrokeColor(NSColor.green.cgColor)
+        context.setLineWidth(2.0)
+        context.strokeEllipse(in: circleRect)
+        
+        context.restoreGState()
+    }
+
+    private func drawTooltip(context: CGContext, at point: CGPoint,
+                            dataPoint: (date: Date, value: Double), in rect: CGRect) {
+        // Formater les données
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "fr_FR")
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .short
+        
+        let dateText = dateFormatter.string(from: dataPoint.date)
+        let valueText = String(format: "%.2f", dataPoint.value)
+        
+        let tooltipText = "\(dateText)\n\(valueText)"
+        
+        // Attributs du texte
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11),
+            .foregroundColor: NSColor.white
+        ]
+        
+        let attributedText = NSAttributedString(string: tooltipText, attributes: attributes)
+        let textSize = attributedText.size()
+        
+        // Calculer la position du tooltip
+        let padding: CGFloat = 8
+        let tooltipWidth = textSize.width + padding * 2
+        let tooltipHeight = textSize.height + padding * 2
+        
+        var tooltipX = point.x + 15
+        var tooltipY = point.y - tooltipHeight / 2
+        
+        // Ajuster pour rester dans les limites
+        if tooltipX + tooltipWidth > rect.maxX {
+            tooltipX = point.x - tooltipWidth - 15
+        }
+        if tooltipY < rect.minY {
+            tooltipY = rect.minY
+        } else if tooltipY + tooltipHeight > rect.maxY {
+            tooltipY = rect.maxY - tooltipHeight
+        }
+        
+        let tooltipRect = CGRect(
+            x: tooltipX,
+            y: tooltipY,
+            width: tooltipWidth,
+            height: tooltipHeight
+        )
+        
+        context.saveGState()
+        
+        // Dessiner le fond du tooltip
+        context.setFillColor(NSColor.black.withAlphaComponent(0.8).cgColor)
+        context.fill(tooltipRect)
+        
+        // Dessiner la bordure
+        context.setStrokeColor(NSColor.green.withAlphaComponent(0.6).cgColor)
+        context.setLineWidth(1.0)
+        context.stroke(tooltipRect)
+        
+        context.restoreGState()
+        
+        // Dessiner le texte
+        let textRect = CGRect(
+            x: tooltipX + padding,
+            y: tooltipY + padding,
+            width: textSize.width,
+            height: textSize.height
+        )
+        
+        attributedText.draw(in: textRect)
     }
 }
