@@ -325,71 +325,50 @@ class GraphView: NSView {
         
         // Calculer le nombre optimal de labels
         let availableWidth = graphRect.width
-        let estimatedLabelWidth: CGFloat = 80 // Largeur estimée d'un label de date
-        let maxLabels = max(2, Int(availableWidth / estimatedLabelWidth))
+        let estimatedLabelWidth: CGFloat = 70
+        let maxLabels = max(3, min(7, Int(availableWidth / estimatedLabelWidth)))
         
-        // Si on a moins de données que de labels souhaités, afficher tous les points
-        let actualMaxLabels = min(maxLabels, validPrices.count)
+        // Créer des positions X uniformément réparties dans l'ESPACE VISUEL
+        var labelPositions: [CGFloat] = []
         
-        // Générer les indices de manière uniforme
-        var labelIndices: [Int] = []
-        
-        if actualMaxLabels == 1 {
-            // Cas spécial : un seul label au milieu
-            labelIndices = [validPrices.count / 2]
-        } else if actualMaxLabels == 2 {
-            // Cas spécial : premier et dernier
-            labelIndices = [0, validPrices.count - 1]
+        if maxLabels == 1 {
+            labelPositions = [graphRect.minX + graphRect.width / 2]
         } else {
-            // Distribution uniforme pour 3 labels ou plus
-            for i in 0..<actualMaxLabels {
-                let index: Int
-                if i == 0 {
-                    index = 0 // Premier élément
-                } else if i == actualMaxLabels - 1 {
-                    index = validPrices.count - 1 // Dernier élément
-                } else {
-                    // Éléments intermédiaires distribués uniformément
-                    let step = Double(validPrices.count - 1) / Double(actualMaxLabels - 1)
-                    index = Int(round(Double(i) * step))
-                }
-                labelIndices.append(index)
+            for i in 0..<maxLabels {
+                let ratio = CGFloat(i) / CGFloat(maxLabels - 1)
+                let x = graphRect.minX + ratio * graphRect.width
+                labelPositions.append(x)
             }
         }
         
-        // Supprimer les doublons et trier
-        labelIndices = Array(Set(labelIndices)).sorted()
-        
         var displayedLabels = Set<String>()
         
-        for index in labelIndices {
-            guard index >= 0 && index < validPrices.count else { continue }
+        for xPosition in labelPositions {
+            // Convertir la position X visuelle en ratio temporel
+            let xRatio = (xPosition - graphRect.minX) / graphRect.width
             
-            let date = validPrices[index].date
-            let labelText = formatter.string(from: date)
+            // Trouver l'indice correspondant dans les données
+            // Utiliser la distribution des données réelles, pas une distribution temporelle uniforme
+            let targetIndex = max(0, min(validPrices.count - 1, Int(round(Double(xRatio) * Double(validPrices.count - 1)))))
             
-            // Éviter les doublons de texte (dates identiques formatées)
+            let targetDate = validPrices[targetIndex].date
+            let labelText = formatter.string(from: targetDate)
+            
+            // Éviter les doublons de texte formaté
             if displayedLabels.contains(labelText) {
                 continue
             }
             displayedLabels.insert(labelText)
             
-            // Calculer la position X basée sur la date réelle
-            let xRatio = CGFloat(date.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
-            let x = graphRect.minX + xRatio * graphRect.width
-            
-            // Calculer la taille du label
+            // Utiliser la position X visuelle prévue (pas la position basée sur la date)
+            // Cela garantit un espacement uniforme visuellement
             let size = (labelText as NSString).size(withAttributes: labelAttributes)
             
-            // Centrer le label et s'assurer qu'il reste dans les limites du graphique
-            var labelX = x - size.width / 2
+            // Centrer le label horizontalement
+            var labelX = xPosition - size.width / 2
             
-            // Ajuster pour rester dans les limites
-            if labelX < graphRect.minX {
-                labelX = graphRect.minX
-            } else if labelX + size.width > graphRect.maxX {
-                labelX = graphRect.maxX - size.width
-            }
+            // S'assurer que le label reste dans les limites du graphique
+            labelX = max(graphRect.minX, min(labelX, graphRect.maxX - size.width))
             
             // Dessiner le label
             (labelText as NSString).draw(
@@ -397,6 +376,30 @@ class GraphView: NSView {
                 withAttributes: labelAttributes
             )
         }
+    }
+
+    // Méthode améliorée pour le formatage des dates
+    private func createDateFormatter(for timeSpan: TimeInterval) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        
+        let days = timeSpan / (24 * 60 * 60)
+        
+        if days <= 1 {
+            formatter.dateFormat = "HH:mm"
+        } else if days <= 7 {
+            formatter.dateFormat = "E dd"
+        } else if days <= 30 {
+            formatter.dateFormat = "dd/MM"
+        } else if days <= 365 {
+            formatter.dateFormat = "MMM"
+        } else if days <= 365 * 2 {
+            formatter.dateFormat = "MMM yy"
+        } else {
+            formatter.dateFormat = "yyyy"
+        }
+        
+        return formatter
     }
     
     private func drawFallbackDateLabels(context: CGContext, in graphRect: CGRect,
@@ -452,26 +455,26 @@ class GraphView: NSView {
         }
     }
     
-    private func createDateFormatter(for timeSpan: TimeInterval) -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "fr_FR")
-        
-        let days = timeSpan / (24 * 60 * 60)
-        
-        if days <= 7 {
-            formatter.dateFormat = "E HH:mm"
-        } else if days <= 30 {
-            formatter.dateFormat = "dd/MM"
-        } else if days <= 365 {
-            formatter.dateFormat = "MMM"
-        } else if days <= 365 * 3 {
-            formatter.dateFormat = "MMM yy"
-        } else {
-            formatter.dateFormat = "yyyy"
-        }
-        
-        return formatter
-    }
+//    private func createDateFormatter(for timeSpan: TimeInterval) -> DateFormatter {
+//        let formatter = DateFormatter()
+//        formatter.locale = Locale(identifier: "fr_FR")
+//
+//        let days = timeSpan / (24 * 60 * 60)
+//
+//        if days <= 7 {
+//            formatter.dateFormat = "E HH:mm"
+//        } else if days <= 30 {
+//            formatter.dateFormat = "dd/MM"
+//        } else if days <= 365 {
+//            formatter.dateFormat = "MMM"
+//        } else if days <= 365 * 3 {
+//            formatter.dateFormat = "MMM yy"
+//        } else {
+//            formatter.dateFormat = "yyyy"
+//        }
+//
+//        return formatter
+//    }
     
     private func calculateOptimalDateStep(for timeSpan: TimeInterval, dataCount: Int) -> Int {
         let days = timeSpan / (24 * 60 * 60)
