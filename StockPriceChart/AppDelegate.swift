@@ -98,8 +98,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         
         for period in periods {
             let button = NSButton(title: period, target: self, action: #selector(periodButtonClicked(_:)))
-            button.bezelStyle = .rounded
-            button.controlSize = .small
+            button.bezelStyle = .regularSquare  // rounded
+            //button.controlSize = .small
+            button.isBordered = true
             button.setButtonType(.pushOnPushOff) // Type de bouton qui reste enfoncé
             
             // Marquer le bouton par défaut comme actif (enfoncé)
