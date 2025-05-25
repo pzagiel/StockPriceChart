@@ -2,7 +2,7 @@ import Cocoa
 
 var graphView: GraphView!
 var tickerField: NSTextField!
-var shortNameField: NSTextField!
+//var shortNameField: NSTextField!
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     var window: NSWindow!
@@ -54,15 +54,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         // Créer le champ ticker et bouton de recherche
         tickerField = NSTextField(string: "0P0001KVR5.F")
         tickerField.placeholderString = "Ticker"
-        tickerField.frame.size.width = 150
+        //tickerField.frame.size.width = 150
         tickerField.delegate = self
+        //tickerField.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        //tickerField.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
         
-        shortNameField = NSTextField(string: "Test")
-        shortNameField.placeholderString = "shortName"
-        shortNameField.frame.size.width = 150
-        shortNameField.delegate = self
-        let searchButton = NSButton(title: "Charger", target: self, action: #selector(searchButtonClicked))
+        //shortNameField = NSTextField(string: "Test")
+        //shortNameField.placeholderString = "shortName"
+        //shortNameField.frame.size.width = 150
+        //shortNameField.frame.size.height = 24
+        //shortNameField.translatesAutoresizingMaskIntoConstraints = false
+        //shortNameField.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        //shortNameField.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        //shortNameField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        //shortNameField.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
 
+        //shortNameField.delegate = self
+        //shortNameField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        //shortNameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        //shortNameField.translatesAutoresizingMaskIntoConstraints = false
+        //shortNameField.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        //shortNameField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        //shortNameField.widthAnchor.constraint(equalToConstant: 150).isActive = true
+        //shortNameField.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        
+        
+        let searchButton = NSButton(title: "Charger", target: self, action: #selector(searchButtonClicked))
+        searchButton.setContentHuggingPriority(.required, for: .horizontal)
+        searchButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        
         // Créer les boutons de période
         let periods = ["1d", "1w", "1mo", "3mo", "6mo","ytd", "1y", "2y", "3y", "5y","max"]
         var periodButtons: [NSButton] = []
@@ -81,8 +101,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         searchBar.orientation = .horizontal
         searchBar.spacing = 8
         searchBar.addArrangedSubview(tickerField)
-        searchBar.addArrangedSubview(shortNameField)
+        //searchBar.addArrangedSubview(shortNameField)
         searchBar.addArrangedSubview(searchButton)
+        //searchBar.wantsLayer = true
+        //searchBar.layer?.backgroundColor = NSColor.red.cgColor
+        
 
         // Stack horizontale pour les boutons de période
         let periodBar = NSStackView()
