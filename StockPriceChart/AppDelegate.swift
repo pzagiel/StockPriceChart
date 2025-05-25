@@ -2,6 +2,7 @@ import Cocoa
 
 var graphView: GraphView!
 var tickerField: NSTextField!
+var periodButtons: [NSButton] = [] // Ajout pour garder une référence aux boutons
 //var shortNameField: NSTextField!
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
@@ -28,6 +29,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     }
     
     @objc func periodButtonClicked(_ sender: NSButton) {
+        // Réinitialiser tous les boutons à l'état normal (non enfoncés)
+        for button in periodButtons {
+            button.state = .off
+        }
+        
+        // Mettre le bouton cliqué en état enfoncé
+        sender.state = .on
+        
         currentPeriod = sender.title.lowercased()
         let ticker = tickerField.stringValue.isEmpty ? "0P0001KVR5.F" : tickerField.stringValue.uppercased()
         loadDataFromYahoo(from: ticker, into: graphView)
@@ -85,12 +94,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         
         // Créer les boutons de période
         let periods = ["1d", "1w", "1mo", "3mo", "6mo","ytd", "1y", "2y", "3y", "5y","max"]
-        var periodButtons: [NSButton] = []
+        periodButtons = [] // Réinitialiser le tableau
         
         for period in periods {
             let button = NSButton(title: period, target: self, action: #selector(periodButtonClicked(_:)))
             button.bezelStyle = .rounded
             button.controlSize = .small
+            button.setButtonType(.pushOnPushOff) // Type de bouton qui reste enfoncé
+            
+            // Marquer le bouton par défaut comme actif (enfoncé)
+            if period == currentPeriod {
+                button.state = .on
+            } else {
+                button.state = .off
+            }
+            
             periodButtons.append(button)
         }
 
