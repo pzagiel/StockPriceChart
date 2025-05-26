@@ -130,6 +130,21 @@ class GraphView: NSView {
         return ((lastPrice - firstPrice) / firstPrice) * 100.0
     }
     
+    private func calculatePerformanceToPoint(_ targetValue: Double) -> Double? {
+        guard let firstPrice = stockPrices.first?.value, firstPrice > 0 else { return nil }
+        
+        return ((targetValue - firstPrice) / firstPrice) * 100.0
+    }
+    
+    private func calculateHighLow() -> (high: Double, low: Double)? {
+        guard !stockPrices.isEmpty else { return nil }
+        
+        let values = stockPrices.map { $0.value }
+        guard let high = values.max(), let low = values.min() else { return nil }
+        
+        return (high: high, low: low)
+    }
+    
     private func calculateNiceInterval(_ range: Double, _ targetTicks: Int) -> Double {
         let roughInterval = range / Double(targetTicks - 1)
         let magnitude = pow(10.0, floor(log10(roughInterval)))
@@ -639,14 +654,27 @@ class GraphView: NSView {
         var performanceText = ""
         var performanceColor = NSColor.white
         
-        if let performance = calculatePerformance() {
+        if let performance = calculatePerformanceToPoint(dataPoint.value) {
             let sign = performance >= 0 ? "+" : ""
             performanceText = " (\(sign)\(String(format: "%.2f", performance))%)"
             performanceColor = performance >= 0 ? NSColor.green : NSColor.red
         }
         
+        // Ajouter les informations High/Low pour le contexte
+        var highLowText = ""
+        if let highLow = calculateHighLow() {
+            let isHigh = abs(dataPoint.value - highLow.high) < 0.01
+            let isLow = abs(dataPoint.value - highLow.low) < 0.01
+            
+            if isHigh {
+                highLowText = " 📈 MAX"
+            } else if isLow {
+                highLowText = " 📉 MIN"
+            }
+        }
+        
         // Créer le texte avec la performance colorée
-        let baseText = "\(valueText)\(performanceText)\n\(dateText)"
+        let baseText = "\(valueText)\(performanceText)\(highLowText)\n\(dateText)"
         
         // Attributs du texte de base
         let baseAttributes: [NSAttributedString.Key: Any] = [
@@ -694,14 +722,17 @@ class GraphView: NSView {
         
         context.saveGState()
         
-        // Dessiner le fond du tooltip
-        context.setFillColor(NSColor.black.withAlphaComponent(0.8).cgColor)
-        context.fill(tooltipRect)
+        // Dessiner le fond du tooltip avec un léger arrondi
+        let roundedRect = CGPath(roundedRect: tooltipRect, cornerWidth: 4, cornerHeight: 4, transform: nil)
+        context.addPath(roundedRect)
+        context.setFillColor(NSColor.black.withAlphaComponent(0.85).cgColor)
+        context.fillPath()
         
         // Dessiner la bordure
-        context.setStrokeColor(NSColor.green.withAlphaComponent(0.6).cgColor)
+        context.addPath(roundedRect)
+        context.setStrokeColor(performanceColor.withAlphaComponent(0.6).cgColor)
         context.setLineWidth(1.0)
-        context.stroke(tooltipRect)
+        context.strokePath()
         
         context.restoreGState()
         
