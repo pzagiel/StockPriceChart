@@ -118,6 +118,18 @@ class GraphView: NSView {
         )
     }
     
+    // MARK: - Performance Calculation
+    private func calculatePerformance() -> Double? {
+        guard stockPrices.count >= 2 else { return nil }
+        
+        let firstPrice = stockPrices.first!.value
+        let lastPrice = stockPrices.last!.value
+        
+        guard firstPrice > 0 else { return nil }
+        
+        return ((lastPrice - firstPrice) / firstPrice) * 100.0
+    }
+    
     private func calculateNiceInterval(_ range: Double, _ targetTicks: Int) -> Double {
         let roughInterval = range / Double(targetTicks - 1)
         let magnitude = pow(10.0, floor(log10(roughInterval)))
@@ -619,20 +631,40 @@ class GraphView: NSView {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "fr_FR")
         dateFormatter.dateStyle = .medium
-        //dateFormatter.timeStyle = .short
         
         let dateText = dateFormatter.string(from: dataPoint.date)
         let valueText = String(format: "%.2f", dataPoint.value)
         
-        let tooltipText = "\(valueText)\n\(dateText)"
+        // Calculer et formater la performance
+        var performanceText = ""
+        var performanceColor = NSColor.white
         
-        // Attributs du texte
-        let attributes: [NSAttributedString.Key: Any] = [
+        if let performance = calculatePerformance() {
+            let sign = performance >= 0 ? "+" : ""
+            performanceText = " (\(sign)\(String(format: "%.2f", performance))%)"
+            performanceColor = performance >= 0 ? NSColor.green : NSColor.red
+        }
+        
+        // Créer le texte avec la performance colorée
+        let baseText = "\(valueText)\(performanceText)\n\(dateText)"
+        
+        // Attributs du texte de base
+        let baseAttributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 11),
             .foregroundColor: NSColor.white
         ]
         
-        let attributedText = NSAttributedString(string: tooltipText, attributes: attributes)
+        // Créer NSMutableAttributedString pour pouvoir colorer différemment
+        let attributedText = NSMutableAttributedString(string: baseText, attributes: baseAttributes)
+        
+        // Trouver la plage de la performance pour la colorer différemment
+        if !performanceText.isEmpty {
+            let range = (baseText as NSString).range(of: performanceText)
+            if range.location != NSNotFound {
+                attributedText.addAttribute(.foregroundColor, value: performanceColor, range: range)
+            }
+        }
+        
         let textSize = attributedText.size()
         
         // Calculer la position du tooltip
