@@ -661,20 +661,20 @@ class GraphView: NSView {
         }
         
         // Ajouter les informations High/Low pour le contexte
-        var highLowText = ""
-        if let highLow = calculateHighLow() {
-            let isHigh = abs(dataPoint.value - highLow.high) < 0.01
-            let isLow = abs(dataPoint.value - highLow.low) < 0.01
-            
-            if isHigh {
-                highLowText = " 📈 MAX"
-            } else if isLow {
-                highLowText = " 📉 MIN"
-            }
-        }
+//        var highLowText = ""
+//        if let highLow = calculateHighLow() {
+//            let isHigh = abs(dataPoint.value - highLow.high) < 0.01
+//            let isLow = abs(dataPoint.value - highLow.low) < 0.01
+//
+//            if isHigh {
+//                highLowText = " 📈 MAX"
+//            } else if isLow {
+//                highLowText = " 📉 MIN"
+//            }
+//        }
         
         // Créer le texte avec la performance colorée
-        let baseText = "\(valueText)\(performanceText)\(highLowText)\n\(dateText)"
+        let baseText = "\(valueText)\(performanceText)\n\(dateText)"
         
         // Attributs du texte de base
         let baseAttributes: [NSAttributedString.Key: Any] = [
