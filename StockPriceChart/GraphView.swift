@@ -1,5 +1,10 @@
 import Cocoa
 
+extension Calendar {
+    func startOfMonth(for date: Date) -> Date {
+        return self.date(from: self.dateComponents([.year, .month], from: date))!
+    }
+}
 class GraphView: NSView {
     
     // MARK: - Properties
@@ -360,7 +365,7 @@ class GraphView: NSView {
         }
     }
     
-    private func drawDateLabels(context: CGContext, in graphRect: CGRect,
+    private func drawDateLabelsClaude(context: CGContext, in graphRect: CGRect,
                                with validPrices: [(date: Date, value: Double)],
                                dataRange: DataRange) {
         let formatter = createDateFormatter(for: dataRange.dateSpan)
@@ -418,6 +423,50 @@ class GraphView: NSView {
                 at: CGPoint(x: labelX, y: graphRect.minY - size.height - 5),
                 withAttributes: labelAttributes
             )
+        }
+    }
+    
+    private func drawDateLabels(context: CGContext, in graphRect: CGRect,
+                               with validPrices: [(date: Date, value: Double)],
+                               dataRange: DataRange) {
+        let formatter = createDateFormatter(for: dataRange.dateSpan)
+        let labelAttributes = createLabelAttributes()
+
+        // Affichage basé sur les mois si l'échelle le permet
+        let calendar = Calendar(identifier: .gregorian)
+        let minDate = calendar.startOfMonth(for: dataRange.dates.min)
+        let maxDate = calendar.startOfMonth(for: dataRange.dates.max)
+        
+        var currentDate = minDate
+        var displayedLabels = Set<String>()
+        
+        while currentDate <= maxDate {
+            let xRatio = CGFloat(currentDate.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
+            let xPosition = graphRect.minX + xRatio * graphRect.width
+            
+            // Ne pas dessiner en dehors du graphRect
+            guard xPosition >= graphRect.minX, xPosition <= graphRect.maxX else {
+                currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
+                continue
+            }
+
+            let labelText = formatter.string(from: currentDate)
+            if displayedLabels.contains(labelText) {
+                currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
+                continue
+            }
+            displayedLabels.insert(labelText)
+
+            let size = (labelText as NSString).size(withAttributes: labelAttributes)
+            var labelX = xPosition - size.width / 2
+            labelX = max(graphRect.minX, min(labelX, graphRect.maxX - size.width))
+
+            (labelText as NSString).draw(
+                at: CGPoint(x: labelX, y: graphRect.minY - size.height - 5),
+                withAttributes: labelAttributes
+            )
+
+            currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
         }
     }
 
