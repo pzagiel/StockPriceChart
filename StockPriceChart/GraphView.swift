@@ -450,6 +450,13 @@ class GraphView: NSView {
                 continue
             }
 
+            // Nouvelle ligne : plus visible et placée sous l'axe X
+            context.setStrokeColor(NSColor.white.cgColor)
+            context.setLineWidth(0.7)
+            context.move(to: CGPoint(x: xPosition, y: graphRect.minY - 5))
+            context.addLine(to: CGPoint(x: xPosition, y: graphRect.minY))
+            context.strokePath()
+
             let labelText = formatter.string(from: currentDate)
             if displayedLabels.contains(labelText) {
                 currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
