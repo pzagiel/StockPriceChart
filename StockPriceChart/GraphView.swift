@@ -100,7 +100,17 @@ class GraphView: NSView {
         let interval: Double
         let niceBounds: (min: Double, max: Double)
     }
-    
+    func copyGraphToClipboard() {
+        let imageRep = bitmapImageRepForCachingDisplay(in: bounds)!
+        cacheDisplay(in: bounds, to: imageRep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(imageRep)
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+    }
+
     // MARK: - Data Processing
     private func calculateDataRange(from validPrices: [(date: Date, value: Double)]) -> DataRange? {
         guard !validPrices.isEmpty else { return nil }
