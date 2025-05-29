@@ -179,6 +179,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         editMenuItem.submenu = editMenu
 
         editMenu.addItem(withTitle: "Copier", action: #selector(copyGraph), keyEquivalent: "c").keyEquivalentModifierMask = [.command]
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(
+            withTitle: "Copier comme PDF",
+            action: #selector(copyGraphAsPDF),
+            keyEquivalent: "c"
+        ).keyEquivalentModifierMask = [.command, .option]
 
         NSApp.mainMenu = mainMenu
 
@@ -189,6 +195,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     }
     @objc func copyGraph() {
         graphView.copyGraphToClipboard()
+    }
+    @objc func copyGraphAsPDF() {
+        let bounds = graphView.bounds
+
+        let pdfData = NSMutableData()
+        var mediaBox = bounds
+
+        guard let consumer = CGDataConsumer(data: pdfData as CFMutableData),
+              let pdfContext = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
+            print("Erreur création contexte PDF")
+            return
+        }
+
+        // Créer un contexte NSGraphicsContext lié au contexte PDF
+        let graphicsContext = NSGraphicsContext(cgContext: pdfContext, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = graphicsContext
+
+        // Commencer une page PDF
+        pdfContext.beginPDFPage(nil)
+
+        // ⚠️ Appeler explicitement draw() sur ta vue
+        graphView.draw(bounds)
+
+        // Terminer la page
+        pdfContext.endPDFPage()
+
+        // Nettoyage
+        NSGraphicsContext.restoreGraphicsState()
+        pdfContext.closePDF()
+
+        // Copier le PDF dans le presse-papiers
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+
+        let item = NSPasteboardItem()
+        item.setData(pdfData as Data, forType: .pdf)
+        pasteboard.writeObjects([item])
     }
 
     func loadDataFromYahoo(from ticker: String, into graphView: GraphView) {
