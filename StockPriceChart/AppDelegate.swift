@@ -172,22 +172,46 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         window.contentView = containerView
         window.makeKeyAndOrderFront(nil)
 
-        // Ajouter le raccourci clavier Command-C pour copier le graphique
         let mainMenu = NSMenu()
+
+        // Menu "Application"
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+
+        let appMenu = NSMenu()
+        appMenuItem.submenu = appMenu
+        appMenu.title = "Stock Price Chart"
+
+        appMenu.addItem(
+            withTitle: "About Stock Price Chart",
+            action: #selector(showAboutWindow),
+            keyEquivalent: ""
+        )
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(
+            withTitle: "Quit Stock Price Chart",
+            action: #selector(quit),
+            keyEquivalent: "q"
+        ).keyEquivalentModifierMask = [.command]
+
+        // Menu "Édition"
         let editMenuItem = NSMenuItem()
         mainMenu.addItem(editMenuItem)
 
         let editMenu = NSMenu(title: "Édition")
         editMenuItem.submenu = editMenu
 
-        editMenu.addItem(withTitle: "Copier", action: #selector(copyGraph), keyEquivalent: "c").keyEquivalentModifierMask = [.command]
-        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(
+            withTitle: "Copier",
+            action: #selector(copyGraph),
+            keyEquivalent: "c"
+        ).keyEquivalentModifierMask = [.command]
+
         editMenu.addItem(
             withTitle: "Copier comme PDF",
             action: #selector(copyGraphAsPDF),
             keyEquivalent: "c"
         ).keyEquivalentModifierMask = [.command, .option]
-        editMenu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").keyEquivalentModifierMask = [.command]
         NSApp.mainMenu = mainMenu
 
         
@@ -195,6 +219,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         // Charger les données initiales avec la période par défaut
         loadDataFromYahoo(from: "0P0001KVR5.F", into: graphView)
     }
+    
+    @objc func showAboutWindow() {
+        let alert = NSAlert()
+        alert.messageText = "Stock Price Chart"
+        alert.informativeText = "Prototype de visualisation des cours boursiers.\nVersion 0.1.\nCreated by Patrick Zagiel"
+        alert.alertStyle = .informational
+        alert.runModal()
+    }
+
     @objc func quit() {
         NSApp.terminate(nil)
     }
