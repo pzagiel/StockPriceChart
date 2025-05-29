@@ -1,8 +1,10 @@
 import Cocoa
+import AVFoundation
 
 var graphView: GraphView!
 var tickerField: NSTextField!
 var periodButtons: [NSButton] = [] // Ajout pour garder une référence aux boutons
+var shutterPlayer: AVAudioPlayer?
 //var shortNameField: NSTextField!
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
@@ -185,7 +187,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
             action: #selector(copyGraphAsPDF),
             keyEquivalent: "c"
         ).keyEquivalentModifierMask = [.command, .option]
-
+        editMenu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q").keyEquivalentModifierMask = [.command]
         NSApp.mainMenu = mainMenu
 
         
@@ -193,8 +195,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         // Charger les données initiales avec la période par défaut
         loadDataFromYahoo(from: "0P0001KVR5.F", into: graphView)
     }
+    @objc func quit() {
+        NSApp.terminate(nil)
+    }
     @objc func copyGraph() {
         graphView.copyGraphToClipboard()
+        //NSSound(named: NSSound.Name("Glass"))?.play()
+        playShutterSound()
+    }
+    
+    func playShutterSound() {
+        guard let url = Bundle.main.url(forResource: "PhotoShutterIPhone", withExtension: "aiff") else {
+            print("⚠️ Son non trouvé dans le bundle")
+            return
+        }
+
+        do {
+            shutterPlayer = try AVAudioPlayer(contentsOf: url)
+            shutterPlayer?.prepareToPlay()
+            shutterPlayer?.play()
+        } catch {
+            print("❌ Erreur de lecture audio : \(error)")
+        }
     }
     @objc func copyGraphAsPDF() {
         let bounds = graphView.bounds
