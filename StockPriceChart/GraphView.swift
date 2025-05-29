@@ -429,41 +429,74 @@ class GraphView: NSView {
     private func drawDateLabels(context: CGContext, in graphRect: CGRect,
                                with validPrices: [(date: Date, value: Double)],
                                dataRange: DataRange) {
-        let formatter = createDateFormatter(for: dataRange.dateSpan)
         let labelAttributes = createLabelAttributes()
-
-        // Affichage basé sur les mois si l'échelle le permet
         let calendar = Calendar(identifier: .gregorian)
-        let minDate = calendar.startOfMonth(for: dataRange.dates.min)
-        let maxDate = calendar.startOfMonth(for: dataRange.dates.max)
-        
-        var currentDate = minDate
+        let totalDays = dataRange.dateSpan / (24 * 60 * 60)
+
+        var currentDate: Date
+        var stepComponent: Calendar.Component
+        var stepValue: Int
+        var dateFormat: String
+
+        if totalDays <= 10 {
+            // Afficher tous les jours
+            stepComponent = .day
+            stepValue = 1
+            dateFormat = "dd MMM"
+        } else if totalDays <= 31 {
+            // Tous les 5 jours
+            stepComponent = .day
+            stepValue = 5
+            dateFormat = "dd MMM"
+        } else if totalDays <= 180 {
+            // Début de chaque mois
+            stepComponent = .month
+            stepValue = 1
+            dateFormat = "MMM"
+        } else if totalDays <= 730 {
+            // Un mois sur deux
+            stepComponent = .month
+            stepValue = 2
+            dateFormat = "MMM yy"
+        } else {
+            // Afficher par année
+            stepComponent = .year
+            stepValue = 1
+            dateFormat = "yyyy"
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateFormat = dateFormat
+
+        currentDate = calendar.startOfDay(for: dataRange.dates.min)
+
         var displayedLabels = Set<String>()
-        
-        while currentDate <= maxDate {
+
+        while currentDate <= dataRange.dates.max {
             let xRatio = CGFloat(currentDate.timeIntervalSince(dataRange.dates.min) / dataRange.dateSpan)
             let xPosition = graphRect.minX + xRatio * graphRect.width
-            
-            // Ne pas dessiner en dehors du graphRect
+
             guard xPosition >= graphRect.minX, xPosition <= graphRect.maxX else {
-                currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
+                currentDate = calendar.date(byAdding: stepComponent, value: stepValue, to: currentDate) ?? currentDate.addingTimeInterval(86400)
                 continue
             }
 
-            // Nouvelle ligne : plus visible et placée sous l'axe X
+            let labelText = formatter.string(from: currentDate)
+            if displayedLabels.contains(labelText) {
+                currentDate = calendar.date(byAdding: stepComponent, value: stepValue, to: currentDate) ?? currentDate.addingTimeInterval(86400)
+                continue
+            }
+            displayedLabels.insert(labelText)
+
+            // Ligne verticale sous l'axe X
             context.setStrokeColor(NSColor.white.cgColor)
             context.setLineWidth(0.7)
             context.move(to: CGPoint(x: xPosition, y: graphRect.minY - 5))
             context.addLine(to: CGPoint(x: xPosition, y: graphRect.minY))
             context.strokePath()
 
-            let labelText = formatter.string(from: currentDate)
-            if displayedLabels.contains(labelText) {
-                currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
-                continue
-            }
-            displayedLabels.insert(labelText)
-
+            // Dessiner le texte centré
             let size = (labelText as NSString).size(withAttributes: labelAttributes)
             var labelX = xPosition - size.width / 2
             labelX = max(graphRect.minX, min(labelX, graphRect.maxX - size.width))
@@ -473,7 +506,7 @@ class GraphView: NSView {
                 withAttributes: labelAttributes
             )
 
-            currentDate = calendar.date(byAdding: .month, value: 1, to: currentDate)!
+            currentDate = calendar.date(byAdding: stepComponent, value: stepValue, to: currentDate) ?? currentDate.addingTimeInterval(86400)
         }
     }
 
