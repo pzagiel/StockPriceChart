@@ -198,17 +198,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         let editMenuItem = NSMenuItem()
         mainMenu.addItem(editMenuItem)
 
-        let editMenu = NSMenu(title: "Édition")
+        let editMenu = NSMenu(title: "Edit")
         editMenuItem.submenu = editMenu
 
         editMenu.addItem(
-            withTitle: "Copier",
+            withTitle: "Copy",
             action: #selector(copyGraph),
             keyEquivalent: "c"
         ).keyEquivalentModifierMask = [.command]
 
         editMenu.addItem(
-            withTitle: "Copier comme PDF",
+            withTitle: "Copy as PDF",
             action: #selector(copyGraphAsPDF),
             keyEquivalent: "c"
         ).keyEquivalentModifierMask = [.command, .option]
@@ -223,7 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     @objc func showAboutWindow() {
         let alert = NSAlert()
         alert.messageText = "Stock Price Chart"
-        alert.informativeText = "Prototype de visualisation des cours boursiers.\nVersion 0.1.\nCreated by Patrick Zagiel"
+        alert.informativeText = "Prototype stock price chart component.\nVersion 0.1.\nCreated by Patrick Zagiel 2025"
         alert.alertStyle = .informational
         alert.runModal()
     }
