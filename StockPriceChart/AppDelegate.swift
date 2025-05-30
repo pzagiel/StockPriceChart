@@ -262,11 +262,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         windowControllers.append(controller)
         controller.showWindow(nil)
 
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: controller.window, queue: .main) { [weak self] _ in
-            self?.windowControllers.removeAll { $0 == controller }
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: controller.window,
+            queue: .main
+        ) { [weak self, weak controller] _ in
+            guard let self = self, let controller = controller else { return }
+            self.windowControllers.removeAll { $0 == controller }
+            print("🧼 GraphWindowController supprimé du tableau")
         }
-    }
 
+        
+        
+        /* NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: controller.window, queue: .main) { [weak self] _ in
+            self?.windowControllers.removeAll { $0 == controller }
+        } */
+    }
+   
     
     @objc func showAboutWindow() {
         let alert = NSAlert()
