@@ -258,7 +258,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     var windowControllers: [GraphWindowController] = []
 
     @objc func newWindow() {
-        let controller = GraphWindowController(windowNibName: "Window")
+        let controller = GraphWindowController(windowNibName: "GraphWindow")
         windowControllers.append(controller)
         controller.showWindow(nil)
 
@@ -395,7 +395,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         task.resume()
     }
     
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+ /*   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
-    }
+    }*/
 }
