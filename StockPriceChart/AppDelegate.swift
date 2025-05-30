@@ -189,6 +189,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         )
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(
+            withTitle: "Hide Stock Price Chart",
+            action: #selector(NSApplication.hide(_:)),
+            keyEquivalent: "h"
+        ).keyEquivalentModifierMask = [.command]
+        
+        appMenu.addItem(
+            withTitle: "Hide Others",
+            action: #selector(NSApplication.hideOtherApplications(_:)),
+            keyEquivalent: "h"
+        ).keyEquivalentModifierMask = [.command, .option]
+
+        appMenu.addItem(
+            withTitle: "Show All",
+            action: #selector(NSApplication.unhideAllApplications(_:)),
+            keyEquivalent: ""
+        )
+
+
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(
             withTitle: "Quit Stock Price Chart",
             action: #selector(quit),
             keyEquivalent: "q"
