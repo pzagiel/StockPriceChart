@@ -88,5 +88,9 @@ class GraphWindowController: NSWindowController {
 
         task.resume()
     }
+    deinit {
+        print("🧼 GraphWindowController a été libéré")
+    }
+
 }
 
