@@ -845,4 +845,8 @@ extension Calendar {
         
         attributedText.draw(in: textRect)
     }
+    deinit {
+        print("🧼 GraphView a été libéré")
+    }
+
 }
