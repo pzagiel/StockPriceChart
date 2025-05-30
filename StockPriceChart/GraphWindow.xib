@@ -19,11 +19,12 @@
         <window title="Window" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="196" y="240" width="901" height="681"/>
+            <rect key="contentRect" x="552" y="268" width="901" height="681"/>
             <rect key="screenRect" x="0.0" y="0.0" width="2048" height="1127"/>
+            <value key="minSize" type="size" width="650" height="400"/>
             <view key="contentView" wantsLayer="YES" id="EiT-Mj-1SZ">
                 <rect key="frame" x="0.0" y="0.0" width="901" height="681"/>
-                <autoresizingMask key="autoresizingMask"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                 <subviews>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Dsl-fR-BUh">
                         <rect key="frame" x="95" y="648" width="199" height="21"/>
@@ -47,11 +48,11 @@
                         </textFieldCell>
                     </textField>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="n4f-SU-bEj" customClass="GraphView" customModule="StockPriceChart" customModuleProvider="target">
-                        <rect key="frame" x="0.0" y="0.0" width="901" height="582"/>
+                        <rect key="frame" x="0.0" y="0.0" width="901" height="601"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" heightSizable="YES"/>
                     </customView>
                     <stackView distribution="fillEqually" orientation="horizontal" alignment="top" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" fixedFrame="YES" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ORh-Ps-eEd">
-                        <rect key="frame" x="35" y="596" width="846" height="31"/>
+                        <rect key="frame" x="35" y="617" width="508" height="18"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                     </stackView>
                 </subviews>
