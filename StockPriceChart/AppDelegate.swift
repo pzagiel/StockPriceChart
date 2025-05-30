@@ -319,6 +319,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         /* NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: controller.window, queue: .main) { [weak self] _ in
             self?.windowControllers.removeAll { $0 == controller }
         } */
+        
+        if #available(macOS 10.14, *) {
+                   NSApp.appearance = NSAppearance(named: .darkAqua)
+               } else {
+                   // Sur 10.12 ou 10.13, ignorer (pas de mode sombre système)
+                   // Tu peux éventuellement personnaliser les couleurs manuellement ici.
+               }
     }
    
     
