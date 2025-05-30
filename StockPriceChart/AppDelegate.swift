@@ -255,20 +255,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         loadDataFromYahoo(from: "0P0001KVR5.F", into: graphView)
     }
     
+    var windowControllers: [GraphWindowController] = []
+
     @objc func newWindow() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 100, y: 100, width: 900, height: 650),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Nouvelle fenêtre"
-        
-        let newGraphView = GraphView()
-        loadDataFromYahoo(from: "0P0001KVR5.F", into: newGraphView) // ou un autre ticker
-        
-        window.contentView = newGraphView
-        window.makeKeyAndOrderFront(nil)
+        let controller = GraphWindowController(windowNibName: "Window")
+        windowControllers.append(controller)
+        controller.showWindow(nil)
+
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: controller.window, queue: .main) { [weak self] _ in
+            self?.windowControllers.removeAll { $0 == controller }
+        }
     }
 
     
