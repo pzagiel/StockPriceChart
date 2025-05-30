@@ -246,6 +246,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
             action: #selector(copyGraphAsPDF),
             keyEquivalent: "c"
         ).keyEquivalentModifierMask = [.command, .option]
+        
+        // Menu "Window"
+        let windowMenuItem = NSMenuItem()
+        mainMenu.addItem(windowMenuItem)
+
+        let windowMenu = NSMenu(title: "Window")
+        windowMenuItem.submenu = windowMenu
+
+        let closeItem = NSMenuItem(
+            title: "Close",
+            action: #selector(NSWindow.performClose(_:)),
+            keyEquivalent: "w"
+        )
+        closeItem.keyEquivalentModifierMask = [.command]
+        closeItem.target = nil // Important : First Responder
+        windowMenu.addItem(closeItem)
+
+        let mergeItem = NSMenuItem(
+            title: "Merge All Windows",
+            action: #selector(NSWindow.mergeAllWindows(_:)),
+            keyEquivalent: "m"
+        )
+        mergeItem.keyEquivalentModifierMask = [.command, .control]
+        mergeItem.target = nil // First Responder
+        windowMenu.addItem(mergeItem)
+
+        
         NSApp.mainMenu = mainMenu
         
       
