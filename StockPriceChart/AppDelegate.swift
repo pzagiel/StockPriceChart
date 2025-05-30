@@ -262,15 +262,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         windowControllers.append(controller)
         controller.showWindow(nil)
 
+        // Créer une référence faible au contrôleur que l'on veut observer
+        let controllerToObserve = controller
+
+        // S'abonner à la notification de fermeture de la fenêtre du contrôleur
         NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: controller.window,
-            queue: .main
-        ) { [weak self, weak controller] _ in
-            guard let self = self, let controller = controller else { return }
-            self.windowControllers.removeAll { $0 == controller }
+            forName: NSWindow.willCloseNotification, // quand la fenêtre va se fermer
+            object: controllerToObserve.window,      // seulement pour cette fenêtre précise
+            queue: .main                             // on veut exécuter le bloc sur le thread principal
+        ) { [weak self, weak controllerToObserve] notification in
+
+            // Vérifier que self et controllerToObserve existent encore
+            guard let strongSelf = self,
+                  let strongController = controllerToObserve else {
+                // Si l’un a été libéré, on sort proprement
+                return
+            }
+
+            // Supprimer ce contrôleur du tableau des fenêtres ouvertes
+            strongSelf.windowControllers.removeAll { $0 == strongController }
+
+            // Afficher un message de nettoyage
             print("🧼 GraphWindowController supprimé du tableau")
         }
+
 
         
         
