@@ -5,7 +5,7 @@ extension Calendar {
         return self.date(from: self.dateComponents([.year, .month], from: date))!
     }
 }
-class GraphView: NSView {
+@objc class GraphView: NSView {
     
     // MARK: - Properties
     private var stockPrices: [StockPrice] = []
