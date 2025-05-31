@@ -234,13 +234,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
 
         let editMenu = NSMenu(title: "Edit")
         editMenuItem.submenu = editMenu
-
-        editMenu.addItem(
+        
+        // Copy menu item
+        let copyItem = editMenu.addItem(
             withTitle: "Copy",
-            action: #selector(copyGraph),
+            action: Selector(("copy:")),
             keyEquivalent: "c"
-        ).keyEquivalentModifierMask = [.command]
-
+        )
+        copyItem.target = nil
+        copyItem.keyEquivalentModifierMask = [.command]
+        
         editMenu.addItem(
             withTitle: "Copy as PDF",
             action: #selector(copyGraphAsPDF),
@@ -341,7 +344,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
         NSApp.terminate(nil)
     }
     @objc func copyGraph() {
-        graphView.copyGraphToClipboard()
+        graphView.copy()
         //NSSound(named: NSSound.Name("Glass"))?.play()
         playShutterSound()
     }
