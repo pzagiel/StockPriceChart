@@ -1,4 +1,5 @@
 import Cocoa
+import AVFoundation
 
 extension Calendar {
     func startOfMonth(for date: Date) -> Date {
@@ -100,17 +101,37 @@ extension Calendar {
         let interval: Double
         let niceBounds: (min: Double, max: Double)
     }
-    func copyGraphToClipboard() {
-        let imageRep = bitmapImageRepForCachingDisplay(in: bounds)!
-        cacheDisplay(in: bounds, to: imageRep)
-        let image = NSImage(size: bounds.size)
-        image.addRepresentation(imageRep)
+    
+    override var acceptsFirstResponder: Bool { true }
 
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.writeObjects([image])
+    
+    @objc func copy(_ sender: Any?) {
+         let imageRep = bitmapImageRepForCachingDisplay(in: bounds)!
+         cacheDisplay(in: bounds, to: imageRep)
+         let image = NSImage(size: bounds.size)
+         image.addRepresentation(imageRep)
+
+         let pasteboard = NSPasteboard.general
+         pasteboard.clearContents()
+         pasteboard.writeObjects([image])
+         playShutterSound()
     }
+    
+    func playShutterSound() {
+        guard let url = Bundle.main.url(forResource: "PhotoShutterIPhone", withExtension: "aiff") else {
+            print("⚠️ Son non trouvé dans le bundle")
+            return
+        }
 
+        do {
+            shutterPlayer = try AVAudioPlayer(contentsOf: url)
+            shutterPlayer?.prepareToPlay()
+            shutterPlayer?.play()
+        } catch {
+            print("❌ Erreur de lecture audio : \(error)")
+        }
+    }
+    
     // MARK: - Data Processing
     private func calculateDataRange(from validPrices: [(date: Date, value: Double)]) -> DataRange? {
         guard !validPrices.isEmpty else { return nil }
