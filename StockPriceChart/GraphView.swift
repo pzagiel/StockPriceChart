@@ -1,12 +1,31 @@
 import Cocoa
 import AVFoundation
-
+import CoreServices
 extension Calendar {
     func startOfMonth(for date: Date) -> Date {
         return self.date(from: self.dateComponents([.year, .month], from: date))!
     }
 }
-extension GraphView: NSDraggingSource {
+extension GraphView: NSDraggingSource,NSFilePromiseProviderDelegate {
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
+        return "Graph.png"
+    }
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, writePromiseTo url: URL, completionHandler: @escaping (Error?) -> Void) {
+        guard let image = graphImage(),
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmap.representation(using: .png, properties: [:]) else {
+            completionHandler(NSError(domain: "GraphExport", code: 1, userInfo: nil))
+            return
+        }
+        
+        do {
+            try pngData.write(to: url)
+            completionHandler(nil)
+        } catch {
+            completionHandler(error)
+        }
+    }
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         return .copy
     }
@@ -123,13 +142,32 @@ extension GraphView: NSDraggingSource {
         return image
     }
 
-    override func mouseDown(with event: NSEvent) {
+     func mouseDownOld(with event: NSEvent) {
         guard let image = graphImage() else { return }
 
         let draggingItem = NSDraggingItem(pasteboardWriter: image)
 
         let dragFrame = bounds
         draggingItem.setDraggingFrame(dragFrame, contents: image)
+
+        beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let fileType: String
+        if #available(macOS 11.0, *) {
+            fileType = UTType.png.identifier
+        } else {
+            fileType = kUTTypePNG as String
+        }
+
+        let filePromise = NSFilePromiseProvider(fileType: fileType, delegate: self)
+       // let filePromise = NSFilePromiseProvider(fileType: UTType.png.identifier, delegate: self)
+
+        let image = graphImage() ?? NSImage(size: NSSize(width: 100, height: 75))
+
+        let draggingItem = NSDraggingItem(pasteboardWriter: filePromise)
+        draggingItem.setDraggingFrame(bounds, contents: image)
 
         beginDraggingSession(with: [draggingItem], event: event, source: self)
     }
