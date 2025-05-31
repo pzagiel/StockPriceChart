@@ -6,6 +6,17 @@ extension Calendar {
         return self.date(from: self.dateComponents([.year, .month], from: date))!
     }
 }
+extension GraphView: NSDraggingSource {
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        return .copy
+    }
+
+    func ignoreModifierKeys(for session: NSDraggingSession) -> Bool {
+        return true // pour ne pas dépendre de la touche ⌥
+    }
+}
+
+
 @objc class GraphView: NSView {
     
     // MARK: - Properties
@@ -103,6 +114,25 @@ extension Calendar {
     }
     
     override var acceptsFirstResponder: Bool { true }
+
+    func graphImage() -> NSImage? {
+        let rep = bitmapImageRepForCachingDisplay(in: bounds)!
+        cacheDisplay(in: bounds, to: rep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(rep)
+        return image
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let image = graphImage() else { return }
+
+        let draggingItem = NSDraggingItem(pasteboardWriter: image)
+
+        let dragFrame = bounds
+        draggingItem.setDraggingFrame(dragFrame, contents: image)
+
+        beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
 
     
     @objc func copy(_ sender: Any?) {
