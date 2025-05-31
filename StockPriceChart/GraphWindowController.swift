@@ -14,7 +14,7 @@ class GraphWindowController: NSWindowController {
 
     override func windowDidLoad() {
         super.windowDidLoad()
-
+        window?.makeFirstResponder(graphView)
         setupPeriodButtons()
         tickerField?.stringValue = chooseRandomTicker()
         loadDataFromYahoo()
