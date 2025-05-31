@@ -16,9 +16,27 @@ class GraphWindowController: NSWindowController {
         super.windowDidLoad()
 
         setupPeriodButtons()
-        tickerField.stringValue = "0P0001KVR5.F"
+        tickerField?.stringValue = chooseRandomTicker()
         loadDataFromYahoo()
     }
+    
+    func chooseRandomTicker() -> String {
+        let tickers = [
+            "0P0001KVR5.F", "0P0001KVR8", "PANW", "BRNT.MI", "CRUD.L", "MDB", "ALGN", "JD", "INGA.AS",
+            "SBUX", "PHIA.AS", "STMPA.PA", "CAP.PA", "AMZN", "BABA", "AHLA.DE", "9988.HK", "MU",
+            "NFLX", "^BFX", "AIR.PA", "XIOR.BR", "LIN.DE", "TSM", "^NDX", "ENPH", "ADYEN.AS", "SNOW",
+            "XYZ", "^GSPC", "SE", "^STOXX50E", "EXS1.DE", "ARKK", "NET", "MRNA", "WIX", "DIM.PA",
+            "EURUSD=X", "LOTB.BR", "ICLN", "TEMN.SW", "SIE.DE", "^SOX", "^HSI", "000001.SS", "NIO",
+            "BYDDF", "PRX.AS", "ARCT", "CRSP", "PLTR", "9618.HK", "PATH", "^NQCYBR", "FTNT",
+            "RECT.BR", "2330.TW", "ALVET.PA", "ACWI", "DOCU", "CRWD", "IDXX", "KLAC",
+            "JPM", "ACA", "FVRR", "TRUP", "VGP.BR", "373220.KS", "EURKRW=X", "GBS.L", "RUBUSD=X", "USDRUB=X",
+            "BPOST.BR", "CA.PA", "EURN.BR", "TESB.BR", "BAR.BR", "TTE.PA", "XDN0.DE", "INRG.MI",
+            "AYEW.F", "IUSA.DE", "BE", "APD", "UBSG.SW"
+        ]
+        
+        return tickers.randomElement() ?? "AAPL" // Valeur de secours au cas improbable où la liste serait vide
+    }
+
 
     func setupPeriodButtons() {
         let periods = ["1d", "1w", "1mo", "3mo", "6mo", "ytd", "1y", "2y", "3y", "5y", "max"]
